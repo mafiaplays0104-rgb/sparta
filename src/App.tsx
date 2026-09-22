@@ -18,6 +18,7 @@ const CallCockpit: React.FC = () => {
   const {
     currentStage,
     isHardStopped,
+    cancelHardStop,
     selectCategory,
     goNext,
     goBack,
@@ -51,6 +52,10 @@ const CallCockpit: React.FC = () => {
       }
 
       if (e.key === 'Escape') {
+        if (isHardStopped) {
+          cancelHardStop();
+          return;
+        }
         if (isObjectionHandlerOpen) {
           setIsObjectionHandlerOpen(false);
           return;
@@ -135,6 +140,7 @@ const CallCockpit: React.FC = () => {
     isToolsRailOpen,
     setIsToolsRailOpen,
     isHardStopped,
+    cancelHardStop,
   ]);
 
   return (

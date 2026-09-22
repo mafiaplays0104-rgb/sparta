@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCallContext } from '../context/CallContext';
 import type { HardStopDisposition } from '../types';
 import { HARD_STOP_SAY_THIS } from '../data/callFlowData';
-import { OctagonAlert, RotateCcw, ShieldCheck, Download, CheckCircle2 } from 'lucide-react';
+import { OctagonAlert, RotateCcw, ShieldCheck, Download, CheckCircle2, X } from 'lucide-react';
 
 const DISPOSITIONS: { key: HardStopDisposition; label: string; desc: string }[] = [
   {
@@ -36,7 +36,8 @@ export const HardStopCard: React.FC = () => {
   const {
     hardStopDisposition,
     setHardStopDisposition,
-    openHomeModal,
+    confirmHomeReset,
+    cancelHardStop,
     addNote,
     notes,
     callHistory,
@@ -80,6 +81,29 @@ export const HardStopCard: React.FC = () => {
             <OctagonAlert size={30} />
             <span>🔴 CALL ENDED — COMPLIANCE STOP</span>
           </div>
+
+          <button
+            type="button"
+            onClick={cancelHardStop}
+            className="btn-cancel-stop"
+            title="Cancel stop and resume active call"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              color: '#fca5a5',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '6px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            <X size={15} />
+            <span>RESUME CALL</span>
+          </button>
         </div>
 
         <div className="hard-stop-say-this-box">
@@ -131,7 +155,7 @@ export const HardStopCard: React.FC = () => {
           />
         </div>
 
-        {/* Action CTA: Only CLOSE & LOG and RETURN HOME */}
+        {/* Action CTA: Only CLOSE & LOG and START NEW CALL */}
         <div className="hard-stop-footer">
           <span style={{ fontSize: '0.85rem', color: '#fca5a5' }}>
             {isLogged ? (
@@ -145,7 +169,7 @@ export const HardStopCard: React.FC = () => {
             )}
           </span>
 
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={handleCloseAndLog}
@@ -153,16 +177,17 @@ export const HardStopCard: React.FC = () => {
               disabled={!hardStopDisposition}
             >
               <Download size={16} />
-              <span>CLOSE & LOG</span>
+              <span>{isLogged ? 'RE-EXPORT LOG' : 'CLOSE & LOG'}</span>
             </button>
 
             <button
               type="button"
-              onClick={openHomeModal}
+              onClick={confirmHomeReset}
               className="btn-home-reset"
+              title="End session and start a new call"
             >
               <RotateCcw size={16} />
-              <span>RETURN HOME</span>
+              <span>START NEW CALL</span>
             </button>
           </div>
         </div>

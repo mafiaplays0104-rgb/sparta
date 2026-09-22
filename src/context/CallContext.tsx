@@ -69,6 +69,7 @@ interface CallContextType {
   confirmHomeReset: () => void;
   cancelHomeReset: () => void;
   openHomeModal: () => void;
+  cancelHardStop: () => void;
   setHardStopDisposition: (disp: HardStopDisposition) => void;
   setFinalDisposition: (disp: FinalDisposition) => void;
   increaseFontSize: () => void;
@@ -286,6 +287,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveRebuttal(null);
     if (cat === 'STOP') {
       setIsHardStopped(true);
+    } else {
+      setIsHardStopped(false);
     }
   }, []);
 
@@ -542,6 +545,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsHomeModalOpen(true);
   }, []);
 
+  const cancelHardStop = useCallback(() => {
+    setIsHardStopped(false);
+    setSelectedCategory(null);
+    setHardStopDisposition(null);
+  }, []);
+
   const increaseFontSize = useCallback(() => {
     setFontSize((prev) => (prev === 'normal' ? 'large' : 'extra-large'));
   }, []);
@@ -658,6 +667,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         confirmHomeReset,
         cancelHomeReset,
         openHomeModal,
+        cancelHardStop,
         setHardStopDisposition,
         setFinalDisposition,
         increaseFontSize,
