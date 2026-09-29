@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Calendar, Clock, FileText, CheckCircle2, ShieldCheck } from "lucide-react";
+import { X, Calendar, Clock, PhoneForwarded, Check } from "lucide-react";
 import { CallbackDetails } from "../types";
 
 interface CallbackModalProps {
@@ -17,12 +17,15 @@ export const CallbackModal: React.FC<CallbackModalProps> = ({
   customerName,
   customerPhone,
 }) => {
-  const [preferredDate, setPreferredDate] = useState(
-    new Date(Date.now() + 86400000).toISOString().split("T")[0]
-  );
-  const [preferredTime, setPreferredTime] = useState("10:00 - 12:00 (Morning)");
-  const [reason, setReason] = useState("Customer requested callback to review with family");
-  const [advisorNotes, setAdvisorNotes] = useState("");
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const defaultDate = tomorrow.toISOString().split("T")[0];
+
+  const [date, setDate] = useState(defaultDate);
+  const [time, setTime] = useState("10:30");
+  const [timezone, setTimezone] = useState("Europe/London (GMT/BST)");
+  const [reason, setReason] = useState("Customer is busy / requested convenient time");
+  const [notes, setNotes] = useState("");
 
   if (!isOpen) return null;
 
@@ -30,33 +33,33 @@ export const CallbackModal: React.FC<CallbackModalProps> = ({
     e.preventDefault();
     onConfirmCallback({
       requested: true,
-      preferredDate,
-      preferredTime,
+      preferredDate: date,
+      preferredTime: time,
+      timezone,
       reason,
-      advisorNotes,
+      advisorNotes: notes,
     });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+              <PhoneForwarded className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                 Schedule Customer Callback
-              </h2>
+              </h3>
               <p className="text-[11px] text-slate-400">
-                Book a polite, non-pressuring callback at customer's convenience.
+                Book agreed follow-up slot without pressuring the customer
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
             className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -65,82 +68,88 @@ export const CallbackModal: React.FC<CallbackModalProps> = ({
           </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
-          <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-slate-300">
-            <span className="font-semibold text-sparta-400 block mb-0.5">Customer Contact:</span>
-            <span>{customerName || "Customer on Landline"}</span>
-            {customerPhone && <span className="ml-2 font-mono text-slate-400">({customerPhone})</span>}
-          </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5 text-xs">
+          {customerName && (
+            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex justify-between text-[11px]">
+              <span className="text-slate-400">Customer:</span>
+              <span className="text-white font-bold">{customerName}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-slate-400 block mb-1 font-medium">Preferred Date:</label>
+              <label className="text-slate-300 font-medium block mb-1">Preferred Date</label>
               <input
                 type="date"
                 required
-                value={preferredDate}
-                onChange={(e) => setPreferredDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono focus:border-sparta-500 focus:outline-none"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono focus:border-amber-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-slate-400 block mb-1 font-medium">Preferred Time Window:</label>
-              <select
-                value={preferredTime}
-                onChange={(e) => setPreferredTime(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:border-sparta-500 focus:outline-none"
-              >
-                <option value="09:00 - 11:00 (Early Morning)">09:00 - 11:00 (Early Morning)</option>
-                <option value="11:00 - 13:00 (Late Morning)">11:00 - 13:00 (Late Morning)</option>
-                <option value="14:00 - 16:00 (Afternoon)">14:00 - 16:00 (Afternoon)</option>
-                <option value="16:00 - 18:00 (Early Evening)">16:00 - 18:00 (Early Evening)</option>
-                <option value="Weekend Morning">Weekend Morning</option>
-              </select>
+              <label className="text-slate-300 font-medium block mb-1">Preferred Time</label>
+              <input
+                type="time"
+                required
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono focus:border-amber-500 focus:outline-none"
+              />
             </div>
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1 font-medium">Reason for Callback:</label>
+            <label className="text-slate-300 font-medium block mb-1">Timezone</label>
             <input
               type="text"
-              required
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:border-sparta-500 focus:outline-none"
+              disabled
+              value={timezone}
+              className="w-full bg-slate-950/60 border border-slate-800 rounded-lg p-2 text-slate-400 font-mono text-[11px]"
             />
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1 font-medium">Advisor Callback Notes:</label>
+            <label className="text-slate-300 font-medium block mb-1">Callback Reason</label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white focus:border-amber-500 focus:outline-none"
+            >
+              <option value="Customer is busy / requested convenient time">Customer is busy / requested convenient time</option>
+              <option value="Customer wants to check paperwork / bills">Customer wants to check paperwork / bills</option>
+              <option value="Customer asked to speak to family member">Customer asked to speak to family member</option>
+              <option value="Independent company verification in progress">Independent company verification in progress</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-slate-300 font-medium block mb-1">Advisor Follow-up Notes</label>
             <textarea
-              placeholder="e.g. Margaret's daughter will be visiting on Friday to review together..."
-              value={advisorNotes}
-              onChange={(e) => setAdvisorNotes(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white h-20 focus:border-sparta-500 focus:outline-none resize-none"
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Call back after 2pm when bill payer is home..."
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white focus:border-amber-500 focus:outline-none"
             />
           </div>
 
-          <div className="p-2.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-            <span>Compliance guarantee: No unnecessary payment details collected to schedule callbacks.</span>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="pt-2 flex items-center justify-between">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium"
+              className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Confirm Callback & End Call</span>
+              <Check className="w-3.5 h-3.5" />
+              <span>Book Callback & Complete Call</span>
             </button>
           </div>
         </form>

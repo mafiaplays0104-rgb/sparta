@@ -1,180 +1,224 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Copy,
   Check,
   ChevronRight,
+  ChevronLeft,
   Info,
   AlertTriangle,
   ShieldCheck,
-  Sparkles,
-  HelpCircle,
-  PhoneOff,
-  ArrowRight,
-  Volume2,
   Calendar,
-  Lock,
-  UserCheck,
   Percent,
-  CheckCircle,
-  XCircle,
-  HeartHandshake,
+  Sparkles,
+  ArrowRight,
   AlertOctagon,
+  HelpCircle,
+  Calculator,
+  RotateCcw,
 } from "lucide-react";
 import {
-  CallState,
-  CustomerMood,
-  Customer,
+  MasterStage,
+  CustomerRecord,
   OfferConfig,
-  SuggestedResponse,
-  LineVariant,
-  ServiceType,
-  IssueStatus,
-  ConsentRecord,
-  DirectDebitTempData,
-  CallMode,
+  CustomerSentiment,
 } from "../types";
-import { ConversationEngine } from "../engine/conversationEngine";
+import { MasterScriptEngine, STAGES_LIST } from "../engine/masterScriptEngine";
+import { InformationExtractor, ExtractedInfo } from "../engine/informationExtractor";
 import { SecurityEngine } from "../engine/securityEngine";
+import { CalculatorTools } from "../engine/calculatorTools";
 
 interface ScriptPanelProps {
-  state: CallState;
-  suggestedResponse: SuggestedResponse;
-  customer: Customer;
-  onUpdateCustomer: (updated: Partial<Customer>) => void;
-  mood: CustomerMood;
+  currentStage: MasterStage;
+  customer: CustomerRecord;
+  onUpdateCustomer: (updated: Partial<CustomerRecord>) => void;
+  sentiment: CustomerSentiment;
+  onSentimentChange: (sentiment: CustomerSentiment) => void;
   config: OfferConfig;
-  consents: ConsentRecord[];
-  onGrantConsent: (category: ConsentRecord["category"]) => void;
-  onDeclineConsent: (category: ConsentRecord["category"]) => void;
-  onTransition: (nextState: CallState) => void;
-  onEscalate: (reason: string) => void;
+  onTransition: (nextStage: MasterStage) => void;
+  onOpenDobCalculator: () => void;
+  onOpenBillCalculator: () => void;
   onOpenObjections: () => void;
+  onOpenCallback: () => void;
   onEndCall: (reason?: string) => void;
-  callMode: CallMode;
-  directDebitData: DirectDebitTempData;
-  onUpdateDirectDebitData: (data: Partial<DirectDebitTempData>) => void;
+  overrideSayText?: string;
+  onClearOverrideSayText?: () => void;
 }
 
 export const ScriptPanel: React.FC<ScriptPanelProps> = ({
-  state,
-  suggestedResponse,
+  currentStage,
   customer,
   onUpdateCustomer,
-  mood,
+  sentiment,
+  onSentimentChange,
   config,
-  consents,
-  onGrantConsent,
-  onDeclineConsent,
   onTransition,
-  onEscalate,
+  onOpenDobCalculator,
+  onOpenBillCalculator,
   onOpenObjections,
+  onOpenCallback,
   onEndCall,
-  callMode,
-  directDebitData,
-  onUpdateDirectDebitData,
+  overrideSayText,
+  onClearOverrideSayText,
 }) => {
-  const [variant, setVariant] = useState<LineVariant>("PRIMARY");
   const [copied, setCopied] = useState(false);
-  const [showWhy, setShowWhy] = useState(false);
+  const [customerResponseText, setCustomerResponseText] = useState("");
+  const [conflictWarning, setConflictWarning] = useState<string | undefined>();
+  const [prohibitedWarning, setProhibitedWarning] = useState<string | undefined>();
 
-  // Pick text based on variant or mood
-  const getActiveText = () => {
-    if (variant === "SHORT" || mood === "IMPATIENT") return suggestedResponse.short;
-    if (variant === "EXPLAIN" || mood === "ELDERLY_SLOW" || mood === "CONFUSED") {
-      return suggestedResponse.explain;
-    }
-    return suggestedResponse.primary;
-  };
+  const stageDef = MasterScriptEngine.getStageDefinition(currentStage, customer, config);
+  const currentIndex = STAGES_LIST.indexOf(currentStage);
+  const canGoBack = currentIndex > 0;
+  const canGoNext = currentIndex < STAGES_LIST.length - 1;
 
-  const activeText = getActiveText();
+  const sayText = overrideSayText || stageDef.getSayText(customer, config);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(activeText);
+    navigator.clipboard.writeText(sayText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleUseLine = () => {
-    handleCopy();
-    // In Quick or Production mode, if nextState exists, provide intuitive progression
-    if (suggestedResponse.nextState && suggestedResponse.nextState !== state) {
-      onTransition(suggestedResponse.nextState);
+  // Handle live customer text changes
+  const handleCustomerTextChange = (text: string) => {
+    setCustomerResponseText(text);
+
+    // 1. Prohibited information scan
+    const scan = SecurityEngine.scanProhibitedInformation(text);
+    if (scan.hasProhibited) {
+      setProhibitedWarning(scan.warningMessage);
+    } else {
+      setProhibitedWarning(undefined);
+    }
+
+    // 2. Smart information extraction
+    const extracted: ExtractedInfo = InformationExtractor.extractFromText(text, customer);
+
+    if (extracted.conflictDetected) {
+      setConflictWarning(extracted.conflictDetected.clarificationPrompt);
+    } else {
+      setConflictWarning(undefined);
+    }
+
+    // Update customer attributes if extracted
+    const updates: Partial<CustomerRecord> = {};
+    if (extracted.monthlyBill !== undefined) {
+      updates.monthlyBill = extracted.monthlyBill;
+      updates.billApproximate = extracted.billApproximate;
+    }
+    if (extracted.landlineUsage !== undefined) {
+      updates.landlineUsage = extracted.landlineUsage;
+    }
+    if (extracted.billIncludesBroadband !== undefined) {
+      updates.billIncludesBroadband = extracted.billIncludesBroadband;
+    }
+    if (extracted.billIncludesTv !== undefined) {
+      updates.billIncludesTv = extracted.billIncludesTv;
+      updates.hasTvService = extracted.hasTvService;
+    }
+    if (extracted.medicalAlarm !== undefined) {
+      updates.medicalAlarm = extracted.medicalAlarm;
+    }
+    if (extracted.hasMobile !== undefined) {
+      updates.hasMobile = extracted.hasMobile;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      onUpdateCustomer(updates);
+    }
+
+    // Adjust sentiment if detected
+    if (extracted.responseCategory === "BUSY") {
+      onSentimentChange("BUSY");
+    } else if (extracted.responseCategory === "SUSPICIOUS") {
+      onSentimentChange("SUSPICIOUS");
+    } else if (extracted.responseCategory === "REFUSAL") {
+      onSentimentChange("REFUSING");
+    } else if (extracted.responseCategory === "CONFUSED") {
+      onSentimentChange("CONFUSED");
     }
   };
 
-  const paymentConsentGranted = consents.find(
-    (c) => c.category === "PAYMENT" && c.status === "GRANTED"
-  );
+  const handleNext = () => {
+    if (canGoNext) {
+      if (onClearOverrideSayText) onClearOverrideSayText();
+      setCustomerResponseText("");
+      onTransition(STAGES_LIST[currentIndex + 1]);
+    }
+  };
 
-  const dobEligibility = ConversationEngine.checkDobEligibility(
-    customer.dateOfBirth,
-    config
-  );
+  const handleBack = () => {
+    if (canGoBack) {
+      if (onClearOverrideSayText) onClearOverrideSayText();
+      onTransition(STAGES_LIST[currentIndex - 1]);
+    }
+  };
+
+  // Quick 30% savings computation if bill exists
+  const billCalc = customer.monthlyBill
+    ? CalculatorTools.calculateBillSavings(customer.monthlyBill, config.maxDiscountPercent)
+    : null;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 p-4 md:p-6 overflow-y-auto">
-      {/* 1. CURRENT OBJECTIVE BAR */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 mb-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+    <main className="flex-1 flex flex-col h-full bg-slate-950 p-4 md:p-6 overflow-y-auto space-y-4">
+      {/* 1. CURRENT STAGE BANNER */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div>
           <span className="text-[10px] font-bold tracking-wider text-sparta-400 uppercase block mb-0.5">
-            CURRENT OBJECTIVE
+            CURRENT STEP • STAGE {stageDef.stageNumber} OF 11
           </span>
-          <h1 className="text-base md:text-lg font-bold text-white tracking-tight">
-            {suggestedResponse.objective}
+          <h1 className="text-base md:text-lg font-black text-white tracking-tight">
+            {stageDef.stageName}
           </h1>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
-          <button
-            onClick={() => setVariant("PRIMARY")}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition-all ${
-              variant === "PRIMARY"
-                ? "bg-sparta-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Full Line
-          </button>
-          <button
-            onClick={() => setVariant("SHORT")}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition-all ${
-              variant === "SHORT"
-                ? "bg-amber-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Shorten
-          </button>
-          <button
-            onClick={() => setVariant("EXPLAIN")}
-            className={`px-2.5 py-1 text-xs rounded font-medium transition-all ${
-              variant === "EXPLAIN"
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Slow Down / Explain
-          </button>
+        <div className="flex items-center gap-2">
+          {overrideSayText && (
+            <button
+              onClick={onClearOverrideSayText}
+              className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1 hover:bg-amber-500/30"
+              title="Return to Master Script wording"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset to Master Script</span>
+            </button>
+          )}
+
+          <div className="text-xs font-mono px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+            Stage {stageDef.stageNumber} / 11
+          </div>
         </div>
       </div>
 
-      {/* 2. MAIN SCRIPT CARD ("SAY:") */}
-      <div className="bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-sparta-500/40 rounded-2xl p-5 md:p-6 mb-4 relative shadow-lg">
-        <div className="flex items-center justify-between mb-3">
+      {/* 2. PROHIBITED INFORMATION BANNER (SECURITY GUARD) */}
+      {prohibitedWarning && (
+        <div className="p-3 rounded-xl bg-red-500/20 border-2 border-red-500 text-red-200 flex items-start gap-2.5 text-xs shadow-lg animate-bounce">
+          <AlertOctagon className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">
+              SECURITY VIOLATION BLOCKED — DO NOT REQUEST PROHIBITED CREDENTIALS
+            </h4>
+            <p className="mt-0.5 leading-relaxed">{prohibitedWarning}</p>
+          </div>
+        </div>
+      )}
+
+      {/* 3. MAIN "SAY THIS" APPROVED MASTER SCRIPT CARD */}
+      <div className="bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-sparta-500/50 rounded-2xl p-5 md:p-6 relative shadow-xl">
+        <div className="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
           <div className="flex items-center gap-2">
-            <span className="bg-sparta-500 text-slate-950 font-black text-xs px-2.5 py-0.5 rounded-full tracking-wider uppercase">
-              SAY
+            <span className="bg-sparta-500 text-slate-950 font-black text-xs px-2.5 py-0.5 rounded-full tracking-wider uppercase shadow-sm">
+              SAY THIS
             </span>
             <span className="text-xs text-slate-400 font-mono">
-              {suggestedResponse.sayLabel || state}
+              Exact Master Script (Rule 2: Do Not Paraphrase)
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="text-xs text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors border border-slate-700"
-              title="Copy to clipboard"
+              className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors border border-slate-700"
+              title="Copy script line"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? "Copied" : "Copy"}</span>
@@ -182,1011 +226,307 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
           </div>
         </div>
 
-        {/* The spoken phrase */}
-        <p className="text-lg md:text-xl text-white font-medium leading-relaxed tracking-normal select-text">
-          "{activeText}"
-        </p>
+        {/* Verbatim Script Text */}
+        <div className="text-lg md:text-xl text-white font-semibold leading-relaxed tracking-normal whitespace-pre-line select-text font-sans">
+          {sayText}
+        </div>
 
-        {/* Script Variant Action Controls */}
-        <div className="mt-5 pt-4 border-t border-slate-800 flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleUseLine}
-            className="bg-sparta-500 hover:bg-sparta-400 text-slate-950 font-bold px-4 py-1.5 rounded-lg text-xs md:text-sm flex items-center gap-1.5 transition-all shadow-md active:scale-95"
-            title="Mark line as used and proceed"
-          >
-            <span>[USE LINE]</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setVariant("SHORT")}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors border border-slate-700"
-          >
-            [SHORTEN]
-          </button>
-
-          <button
-            onClick={() => setVariant("EXPLAIN")}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors border border-slate-700"
-          >
-            [SLOW DOWN]
-          </button>
-
-          <button
-            onClick={() => setVariant("EXPLAIN")}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors border border-slate-700"
-          >
-            [EXPLAIN]
-          </button>
-
-          <button
-            onClick={() => setShowWhy(!showWhy)}
-            className={`font-medium px-3 py-1.5 rounded-lg text-xs transition-colors border ${
-              showWhy
-                ? "bg-sparta-950 text-sparta-300 border-sparta-700"
-                : "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700"
-            }`}
-          >
-            [WHY?]
-          </button>
-
-          <button
-            onClick={onOpenObjections}
-            className="bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border border-amber-800/80 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors ml-auto flex items-center gap-1"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>[OBJECTION]</span>
-          </button>
+        {/* Pause Guidance Indicator */}
+        <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-sparta-300">
+          <span className="w-2 h-2 rounded-full bg-sparta-400 animate-pulse"></span>
+          <span className="font-semibold italic">{stageDef.pauseInstruction}</span>
         </div>
       </div>
 
-      {/* 3. "WHY?" COLLAPSIBLE PANEL */}
-      {showWhy && (
-        <div className="bg-slate-900/90 border border-sparta-500/30 rounded-xl p-4 mb-4 text-xs text-slate-300 animate-fadeIn">
-          <div className="flex items-center gap-2 text-sparta-300 font-bold mb-1 uppercase tracking-wider text-[11px]">
-            <Info className="w-4 h-4" />
-            <span>WHY AM I ASKING THIS?</span>
+      {/* 4. CUSTOMER RESPONSE TEXT AREA WITH SMART EXTRACTION */}
+      <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-sparta-400" />
+            <span>Customer Response (What Did The Customer Say?)</span>
+          </label>
+          <span className="text-[10px] text-slate-500">Live Auto-Extraction Active</span>
+        </div>
+
+        <textarea
+          rows={2}
+          value={customerResponseText}
+          onChange={(e) => handleCustomerTextChange(e.target.value)}
+          placeholder="Type or paste what the customer said (e.g. 'I pay about £80.99 and that includes broadband...')"
+          className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs md:text-sm text-white focus:border-sparta-500 focus:outline-none placeholder:text-slate-500"
+        />
+
+        {/* Quick Response Buttons */}
+        <div>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+            Quick Situation & Response Branches
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {stageDef.quickResponses.map((qr, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  if (qr.autoFill) onUpdateCustomer(qr.autoFill);
+                  if (qr.nextStage) onTransition(qr.nextStage);
+                  if (qr.guidance) {
+                    alert(`Guidance:\n\n${qr.guidance}`);
+                  }
+                }}
+                className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:border-sparta-500/50"
+              >
+                <div className="text-xs font-bold text-sparta-300 mb-0.5">{qr.label}</div>
+                <div className="text-[10px] text-slate-400 leading-tight">{qr.actionDescription}</div>
+              </button>
+            ))}
           </div>
-          <p className="leading-relaxed text-slate-200 mb-2">{suggestedResponse.why}</p>
-          {suggestedResponse.complianceWarning && (
-            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-start gap-1.5 text-[11px]">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{suggestedResponse.complianceWarning}</span>
+        </div>
+      </div>
+
+      {/* 5. STAGE-SPECIFIC INTERACTIVE TOOLS & DATA FIELDS */}
+      {/* Stage 4: DOB Calculator Card */}
+      {currentStage === "STAGE_4_DOB_VALIDATION" && (
+        <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                Stage 4 DOB & Age Calculator Tool
+              </h3>
             </div>
-          )}
+            <button
+              onClick={onOpenDobCalculator}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 shadow-sm"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Open DOB Tool</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label className="text-slate-400 block mb-1">Enter Date of Birth (YYYY-MM-DD):</label>
+              <input
+                type="date"
+                value={customer.dob || ""}
+                onChange={(e) => {
+                  const res = CalculatorTools.calculateAgeFromDob(e.target.value);
+                  const isEligible = CalculatorTools.evaluateDobEligibility({ birthYear: res.birthYear }, config).isEligible;
+                  onUpdateCustomer({
+                    dob: e.target.value,
+                    birthYear: res.birthYear,
+                    calculatedAge: res.age,
+                    isEligibleAge: isEligible,
+                  });
+                }}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-slate-400 block mb-1">Quick Age Conversion:</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {[68, 70, 72, 75, 78, 80].map((age) => (
+                  <button
+                    key={age}
+                    onClick={() => {
+                      const year = CalculatorTools.calculateYearFromAge(age);
+                      const isEligible = CalculatorTools.evaluateDobEligibility({ birthYear: year }, config).isEligible;
+                      onUpdateCustomer({
+                        birthYear: year,
+                        calculatedAge: age,
+                        dob: `${year}-01-01`,
+                        isEligibleAge: isEligible,
+                      });
+                    }}
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px]"
+                  >
+                    {age} yrs (Born {2026 - age})
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* 4. STATE-SPECIFIC INTERACTIVE ACTIONS & DATA INPUTS */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 mb-4">
-        {/* Step: OPENING / BILL RESPONSIBILITY */}
-        {(state === "OPENING" || state === "BILL_RESPONSIBILITY") && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Customer Response — Bill Responsibility
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                onClick={() => onTransition("RAPPORT")}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-emerald-950/50 hover:border-emerald-500/50 border border-slate-700 text-left transition-all group"
-              >
-                <div className="text-xs font-bold text-emerald-400 mb-1 flex items-center justify-between">
-                  <span>✓ Yes, I look after bills</span>
-                  <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Proceed to friendly introduction & rapport.
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  alert(
-                    "Advisor Line: 'That's absolutely fine. Is there somebody else who normally looks after the telephone bill?'"
-                  );
-                }}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-amber-950/50 hover:border-amber-500/50 border border-slate-700 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-amber-400 mb-1">
-                  Someone else manages it
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Ask if the bill payer is available right now.
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  onEndCall("Nobody available to handle telephone bill");
-                }}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-rose-950/50 hover:border-rose-500/50 border border-slate-700 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-rose-400 mb-1 flex items-center gap-1">
-                  <PhoneOff className="w-3 h-3" />
-                  <span>✕ Nobody available</span>
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Say polite closing and end call without disturbing.
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: RAPPORT */}
-        {state === "RAPPORT" && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Natural 1-Sentence Rapport Options
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                onClick={() => onTransition("SERVICE_DISCOVERY")}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-left transition-all"
-              >
-                <span className="text-xs font-bold text-sparta-300 block mb-1">
-                  Customer says: "I'm fine"
-                </span>
-                <span className="text-xs text-slate-300 italic block">
-                  "Good to hear. Right, I'll keep this nice and straightforward for you."
-                </span>
-              </button>
-
-              <button
-                onClick={() => onTransition("SERVICE_DISCOVERY")}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-left transition-all"
-              >
-                <span className="text-xs font-bold text-sparta-300 block mb-1">
-                  Customer says: "I'm alright"
-                </span>
-                <span className="text-xs text-slate-300 italic block">
-                  "Good stuff. I'll explain exactly why I'm calling."
-                </span>
-              </button>
-
-              <button
-                onClick={() => onTransition("SERVICE_DISCOVERY")}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-left transition-all"
-              >
-                <span className="text-xs font-bold text-sparta-300 block mb-1">
-                  Customer says: "What's this regarding?"
-                </span>
-                <span className="text-xs text-slate-300 italic block">
-                  "Of course. It's regarding your telephone line services, checking if any reductions apply."
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: SERVICE_DISCOVERY */}
-        {state === "SERVICE_DISCOVERY" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Select Existing Customer Service
+      {/* Stage 2 & 3: Bill Savings Calculator Widget */}
+      {(currentStage === "STAGE_2_CURRENT_SERVICE" || currentStage === "STAGE_3_OFFER_INTRO") && (
+        <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Percent className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                Bill Reduction & 30% Savings Calculator
               </h3>
-              {customer.serviceType && (
-                <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  Selected: {customer.serviceType.replace(/_/g, " ")}
-                </span>
-              )}
             </div>
+            <button
+              onClick={onOpenBillCalculator}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 shadow-sm"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Open Bill Tool</span>
+            </button>
+          </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {[
-                { type: "PHONE_ONLY" as ServiceType, label: "Phone Only", desc: "Landline voice line only" },
-                { type: "PHONE_INTERNET" as ServiceType, label: "Phone + Broadband", desc: "Landline + Wi-Fi Internet" },
-                { type: "PHONE_INTERNET_TV" as ServiceType, label: "Phone + Net + TV", desc: "Triple-play bundle" },
-                { type: "OTHER" as ServiceType, label: "Other / Unsure", desc: "Alternative setup" },
-              ].map((s) => (
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <span className="text-[10px] text-slate-400 block">Original Bill</span>
+              <span className="text-sm font-bold text-white font-mono">
+                {customer.monthlyBill ? `£${customer.monthlyBill.toFixed(2)}` : "£0.00"}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <span className="text-[10px] text-emerald-400 block">30% Discounted</span>
+              <span className="text-sm font-bold text-emerald-400 font-mono">
+                {billCalc ? billCalc.formattedDiscounted : "—"}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <span className="text-[10px] text-sparta-300 block">Monthly Savings</span>
+              <span className="text-sm font-bold text-sparta-300 font-mono">
+                {billCalc ? billCalc.formattedMonthlySavings : "—"}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <span className="text-[10px] text-indigo-300 block">Annual Savings</span>
+              <span className="text-sm font-bold text-indigo-300 font-mono">
+                {billCalc ? billCalc.formattedAnnualSavings : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stage 6: Direct Debit / Customer ID verification */}
+      {currentStage === "STAGE_6_DIRECT_DEBIT_ID" && (
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            Stage 6 Customer ID Match & Format Rules
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label className="text-slate-400 block mb-1">Customer Identifier (Prefix: IBANGB):</label>
+              <input
+                type="text"
+                value={customer.customerId || ""}
+                onChange={(e) =>
+                  onUpdateCustomer({
+                    customerId: e.target.value.toUpperCase(),
+                    customerIdStatus: "VERIFIED",
+                  })
+                }
+                placeholder="e.g. IBANGB89371284"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono uppercase"
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <button
+                onClick={() =>
+                  onUpdateCustomer({
+                    customerIdStatus: "NOT_AVAILABLE",
+                    customerIdUnavailable: true,
+                  })
+                }
+                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+              >
+                ID Not Available
+              </button>
+              <button
+                onClick={() =>
+                  onUpdateCustomer({
+                    customerIdStatus: "REFUSED",
+                    customerIdRefused: true,
+                  })
+                }
+                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+              >
+                Uncomfortable Sharing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stage 9: Medical Alarm & TV Equipment */}
+      {currentStage === "STAGE_9_FINAL_QUESTIONS" && (
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            Stage 9 Equipment & Medical Alarm Screening
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label className="text-slate-400 block mb-1">Medical Alarm Connected?</label>
+              <div className="flex gap-2">
                 <button
-                  key={s.type}
-                  onClick={() => {
-                    onUpdateCustomer({ serviceType: s.type });
-                    onTransition("ISSUE_CHECK");
-                  }}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    customer.serviceType === s.type
-                      ? "bg-sparta-600/30 border-sparta-400 text-white"
-                      : "bg-slate-800/60 border-slate-700 hover:bg-slate-800 text-slate-300"
+                  onClick={() => onUpdateCustomer({ medicalAlarm: true })}
+                  className={`flex-1 py-2 rounded-lg border font-bold ${
+                    customer.medicalAlarm === true
+                      ? "bg-rose-600/30 border-rose-500 text-rose-300"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
                   }`}
                 >
-                  <div className="text-xs font-bold mb-1">{s.label}</div>
-                  <div className="text-[10px] text-slate-400">{s.desc}</div>
+                  ⚠️ Yes (Alarm Present)
                 </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Step: ISSUE_CHECK */}
-        {state === "ISSUE_CHECK" && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Check for Active Line or Internet Issues
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <button
-                onClick={() => {
-                  onUpdateCustomer({ issueStatus: "NONE" });
-                  onTransition("BILL_DISCOVERY");
-                }}
-                className="p-3 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-600/40 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-emerald-300 mb-1">✓ No Issues</div>
-                <div className="text-[11px] text-slate-400">
-                  Line and service working smoothly.
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  onUpdateCustomer({ issueStatus: "LANDLINE" });
-                  onTransition("ISSUE_ESCALATION");
-                }}
-                className="p-3 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-amber-300 mb-1">⚠️ Landline Trouble</div>
-                <div className="text-[11px] text-slate-400">
-                  Noise, crackle, no dial tone.
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  onUpdateCustomer({ issueStatus: "INTERNET" });
-                  onTransition("ISSUE_ESCALATION");
-                }}
-                className="p-3 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-amber-300 mb-1">⚠️ Internet Fault</div>
-                <div className="text-[11px] text-slate-400">
-                  Dropping connection or slow speeds.
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  onUpdateCustomer({ issueStatus: "BOTH" });
-                  onTransition("ISSUE_ESCALATION");
-                }}
-                className="p-3 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-600/40 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-red-300 mb-1">🚨 Both Faulty</div>
-                <div className="text-[11px] text-slate-400">
-                  Total loss of phone and net.
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: ISSUE_ESCALATION */}
-        {state === "ISSUE_ESCALATION" && (
-          <div className="space-y-4">
-            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
-              <AlertOctagon className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-red-300 uppercase tracking-wider">
-                  ATTENTION REQUIRED — DO NOT CONTINUE NORMAL SALES FLOW
-                </h4>
-                <p className="text-xs text-slate-300 mt-1">
-                  Customer has reported an active service issue. Compliance requires not overlooking service faults. Do NOT invent engineer visits, compensation, or tickets.
-                </p>
+                <button
+                  onClick={() => onUpdateCustomer({ medicalAlarm: false })}
+                  className={`flex-1 py-2 rounded-lg border font-bold ${
+                    customer.medicalAlarm === false
+                      ? "bg-emerald-600/30 border-emerald-500 text-emerald-300"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  ✓ No (Standard Line)
+                </button>
               </div>
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 block mb-1">
-                Brief customer description of issue:
-              </label>
-              <textarea
-                value={customer.issueDescription || ""}
-                onChange={(e) => onUpdateCustomer({ issueDescription: e.target.value })}
-                placeholder="e.g. Crackling on landline for 3 days..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 h-20 focus:border-sparta-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => onEscalate("Customer reported service fault: " + (customer.issueDescription || "Unspecified"))}
-                className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5"
-              >
-                <span>ESCALATE TO SENIOR SUPERVISOR</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => onTransition("BILL_DISCOVERY")}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs"
-              >
-                Customer insists on checking reduction anyway
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: BILL_DISCOVERY */}
-        {state === "BILL_DISCOVERY" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Current Monthly Bill Discovery
-              </h3>
-              {customer.lastBillAmount && (
-                <span className="text-xs text-sparta-400 font-mono font-bold">
-                  Estimated saving: ~£{((customer.lastBillAmount * config.maxDiscountPercent) / 100).toFixed(0)}/mo
-                  (new bill ~£{(customer.lastBillAmount * (1 - config.maxDiscountPercent / 100)).toFixed(0)})
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-400">Quick estimate:</span>
-              {[25, 30, 40, 50, 60, 75].map((amt) => (
-                <button
-                  key={amt}
-                  onClick={() => {
-                    onUpdateCustomer({ lastBillAmount: amt, lastBillEstimated: true });
-                    onTransition("OFFER_INTRO");
-                  }}
-                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold font-mono transition-all ${
-                    customer.lastBillAmount === amt
-                      ? "bg-sparta-600 text-white border-sparta-400"
-                      : "bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700"
-                  }`}
-                >
-                  ~£{amt}
-                </button>
-              ))}
-
-              <div className="flex items-center gap-1.5 ml-2">
-                <span className="text-xs text-slate-400">Custom £:</span>
-                <input
-                  type="number"
-                  placeholder="e.g. 48"
-                  value={customer.lastBillAmount || ""}
-                  onChange={(e) => onUpdateCustomer({ lastBillAmount: Number(e.target.value) || undefined })}
-                  className="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-xs text-white font-mono focus:border-sparta-500 focus:outline-none"
-                />
-                <button
-                  onClick={() => onTransition("OFFER_INTRO")}
-                  className="bg-sparta-600 hover:bg-sparta-500 text-white px-2.5 py-1 rounded text-xs font-medium"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  onUpdateCustomer({ lastBillEstimated: true });
-                  onTransition("OFFER_INTRO");
-                }}
-                className="text-xs text-slate-400 hover:text-white underline"
-              >
-                Customer doesn't remember bill → leave for now & continue
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: OFFER_INTRO & EXPLANATION */}
-        {(state === "OFFER_INTRO" || state === "OFFER_EXPLANATION") && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Authorized Offer Scope — What Does & Doesn't Change
-              </h3>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-sparta-500/20 text-sparta-300 border border-sparta-500/30">
-                Up to {config.maxDiscountPercent}% Reduction
-              </span>
-            </div>
-
-            {/* 4 Cards from Section 18 */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-[10px] font-bold text-sparta-400 uppercase tracking-wider mb-1">
-                  SERVICE
-                </div>
-                <div className="text-xs font-semibold text-white">
-                  Existing service remains the same*
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">No disruption to line</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-[10px] font-bold text-sparta-400 uppercase tracking-wider mb-1">
-                  CONTRACT
-                </div>
-                <div className="text-xs font-semibold text-white">
-                  Existing contract remains the same*
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">No forced renewals</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-[10px] font-bold text-sparta-400 uppercase tracking-wider mb-1">
-                  EQUIPMENT
-                </div>
-                <div className="text-xs font-semibold text-white">
-                  Existing equipment remains the same*
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">Keep current handset</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-950 border border-emerald-500/30">
-                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">
-                  PAYMENT
-                </div>
-                <div className="text-xs font-semibold text-emerald-200">
-                  Direct Debit payment reduced if eligible
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">Up to {config.maxDiscountPercent}% discount</div>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => onTransition("OFFER_INTEREST")}
-                className="bg-sparta-600 hover:bg-sparta-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5"
-              >
-                <span>Check Customer Understanding</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: OFFER_INTEREST */}
-        {state === "OFFER_INTEREST" && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Customer Reaction — "Does that make sense so far?"
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                onClick={() => onTransition("ELIGIBILITY")}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-emerald-950/50 hover:border-emerald-500/50 border border-slate-700 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-emerald-400 mb-1">
-                  ✓ Yes, makes sense / happy to check
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Move naturally to non-intrusive eligibility check.
-                </div>
-              </button>
-
-              <button
-                onClick={() => onOpenObjections()}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-amber-950/50 hover:border-amber-500/50 border border-slate-700 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-amber-400 mb-1">
-                  Has questions or hesitation
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Open UK Objection Engine to address naturally.
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  onEndCall("Customer not interested after clear explanation");
-                }}
-                className="p-3 rounded-xl bg-slate-800/80 hover:bg-rose-950/50 hover:border-rose-500/50 border border-slate-700 text-left transition-all"
-              >
-                <div className="text-xs font-bold text-rose-400 mb-1">
-                  ✕ Customer says "Not interested"
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Respect refusal gracefully without repeated pressure.
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: ELIGIBILITY */}
-        {state === "ELIGIBILITY" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Date of Birth Verification
-                </h3>
-                <span className="text-[11px] text-slate-400">
-                  Campaign Rule: Qualifying birth years {new Date(config.eligibilityRules.minimumDob).getFullYear()}–{new Date(config.eligibilityRules.maximumDob).getFullYear()}
-                </span>
-              </div>
-
-              {customer.dateOfBirth && (
-                <div
-                  className={`px-2.5 py-1 rounded text-xs font-semibold border ${
-                    dobEligibility.isEligible
-                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                      : "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                  }`}
-                >
-                  {dobEligibility.message}
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="text-xs text-slate-300 font-medium">Customer DOB:</label>
+              <label className="text-slate-400 block mb-1">TV Make & Model:</label>
               <input
-                type="date"
-                value={customer.dateOfBirth || ""}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const check = ConversationEngine.checkDobEligibility(val, config);
-                  onUpdateCustomer({ dateOfBirth: val, isEligibleAge: check.isEligible });
-                }}
-                className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-sparta-500 focus:outline-none"
+                type="text"
+                value={customer.tvMakeModel || ""}
+                onChange={(e) =>
+                  onUpdateCustomer({ tvMakeModel: e.target.value, hasTvService: true })
+                }
+                placeholder="e.g. Samsung 43-inch Smart TV"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
               />
-
-              {customer.dateOfBirth && dobEligibility.isEligible && (
-                <button
-                  onClick={() => onTransition("CUSTOMER_DETAILS")}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 ml-auto"
-                >
-                  <span>Confirmed Eligible → Next: Details</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-
-              {customer.dateOfBirth && !dobEligibility.isEligible && (
-                <button
-                  onClick={() => onEndCall("Outside campaign eligibility bracket")}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs ml-auto"
-                >
-                  Outside criteria → Conclude respectfully
-                </button>
-              )}
-            </div>
-
-            <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-              <span>Customer asks: "Why do you need my date of birth?"</span>
-              <button
-                onClick={() => {
-                  alert(
-                    "Advisor Response: 'That's simply being used as part of the eligibility check. I don't want to guess or tell you that you're eligible before we've actually checked.'"
-                  );
-                }}
-                className="text-sparta-400 hover:underline"
-              >
-                Show Advisor Script
-              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Step: CUSTOMER_DETAILS */}
-        {state === "CUSTOMER_DETAILS" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Customer Details Verification
-              </h3>
-              <span className="text-[11px] text-slate-400">
-                Ask one item at a time for older callers
-              </span>
-            </div>
+      {/* 6. BOTTOM STAGE NAVIGATION */}
+      <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+        <button
+          onClick={handleBack}
+          disabled={!canGoBack}
+          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>Previous Step</span>
+        </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">First Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Margaret"
-                  value={customer.firstName || ""}
-                  onChange={(e) => onUpdateCustomer({ firstName: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Last Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Davies"
-                  value={customer.lastName || ""}
-                  onChange={(e) => onUpdateCustomer({ lastName: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">House / Door Number *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 14B or Orchard House"
-                  value={customer.address?.houseNumber || ""}
-                  onChange={(e) =>
-                    onUpdateCustomer({
-                      address: { ...customer.address, houseNumber: e.target.value },
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Street *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Victoria Road"
-                  value={customer.address?.street || ""}
-                  onChange={(e) =>
-                    onUpdateCustomer({
-                      address: { ...customer.address, street: e.target.value },
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Town / City *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Bristol"
-                  value={customer.address?.town || ""}
-                  onChange={(e) =>
-                    onUpdateCustomer({
-                      address: { ...customer.address, town: e.target.value },
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Postcode *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. BS1 4DJ"
-                  value={customer.address?.postcode || ""}
-                  onChange={(e) =>
-                    onUpdateCustomer({
-                      address: { ...customer.address, postcode: e.target.value.toUpperCase() },
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono uppercase focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => onTransition("PAYMENT_CONSENT")}
-                className="bg-sparta-600 hover:bg-sparta-500 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5"
-              >
-                <span>Proceed to Direct Debit Consent Gate</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: PAYMENT_CONSENT (CRITICAL GATE) */}
-        {state === "PAYMENT_CONSENT" && (
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-200">
-              <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider mb-2">
-                <Lock className="w-4 h-4 text-amber-400" />
-                <span>SENSITIVE PAYMENT INFORMATION — CRITICAL CONSENT GATE</span>
-              </div>
-              <ul className="text-xs space-y-1 text-slate-300 list-disc list-inside">
-                <li>1. Explain why information is required (Direct Debit discount rate).</li>
-                <li>2. Explain exactly what will happen (no service disruption, monthly savings).</li>
-                <li>3. Confirm the customer understands.</li>
-                <li>4. Obtain clear explicit verbal consent.</li>
-                <li>5. <strong>NEVER ask for card PIN, CVV, OTP or online-banking passwords.</strong></li>
-                <li>6. Never claim to see details that the system does not actually have.</li>
-              </ul>
-            </div>
-
-            <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-200">
-              <div className="text-sparta-400 font-bold mb-1">MANDATORY ADVISOR SCRIPT:</div>
-              <p className="italic">
-                "Before we go any further, I want to explain the payment part clearly. The reason we're asking about the Direct Debit is to verify the payment method associated with the existing service and apply the authorised reduced rate. Are you comfortable continuing with that?"
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <button
-                onClick={() => onDeclineConsent("PAYMENT")}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs"
-              >
-                Customer declines payment discussion → Lock payment & offer alternative
-              </button>
-
-              <button
-                onClick={() => {
-                  onGrantConsent("PAYMENT");
-                  onTransition("PAYMENT_DETAILS");
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-lg text-xs flex items-center gap-2 shadow-glow-emerald"
-              >
-                <Check className="w-4 h-4" />
-                <span>[REQUEST CONSENT] — Customer Consents & Unlocks Direct Debit</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: PAYMENT_DETAILS */}
-        {state === "PAYMENT_DETAILS" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Direct Debit Information Collection
-                </h3>
-                <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Consent Recorded: {paymentConsentGranted?.timestamp || "Active Session"}
-                </span>
-              </div>
-
-              <div className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-bold">
-                NO CARDS • NO CVV • NO PIN • NO OTP
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">
-                  Account Holder Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Mrs Margaret Davies"
-                  value={directDebitData.accountHolderName}
-                  onChange={(e) =>
-                    onUpdateDirectDebitData({ accountHolderName: e.target.value })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">
-                  Sort Code (6 digits)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 20-40-60"
-                  value={directDebitData.sortCode}
-                  onChange={(e) => {
-                    const validated = SecurityEngine.validateSortCode(e.target.value);
-                    onUpdateDirectDebitData({ sortCode: validated.formatted });
-                  }}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">
-                  Account Number (8 digits)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 12345678"
-                  maxLength={8}
-                  value={directDebitData.accountNumber}
-                  onChange={(e) => {
-                    const clean = e.target.value.replace(/\D/g, "");
-                    onUpdateDirectDebitData({ accountNumber: clean });
-                  }}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-              <div>
-                <span>Security Mask Preview: </span>
-                <span className="font-mono text-sparta-300 font-bold">
-                  {SecurityEngine.maskSortCode(directDebitData.sortCode)} /{" "}
-                  {SecurityEngine.maskAccountNumber(directDebitData.accountNumber)}
-                </span>
-              </div>
-              <span className="text-emerald-400 text-[10px]">
-                ✓ Isolated from browser storage & logs
-              </span>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => onTransition("ADDITIONAL_DETAILS")}
-                className="bg-sparta-600 hover:bg-sparta-500 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5"
-              >
-                <span>Save Payment & Continue to Additional Details</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: ADDITIONAL_DETAILS */}
-        {state === "ADDITIONAL_DETAILS" && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Additional Account Verification & Safety Checks
-            </h3>
-
-            {/* Medical Alarm Critical Check */}
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-              <label className="text-xs text-white font-bold block mb-1">
-                Medical Alarm / Pendant Dependency Check *
-              </label>
-              <p className="text-[11px] text-slate-400 mb-2">
-                "One important service question — do you have a medical alarm or similar device connected through the telephone line?"
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => onUpdateCustomer({ medicalAlarm: false })}
-                  className={`px-3 py-1 rounded text-xs font-semibold border ${
-                    customer.medicalAlarm === false
-                      ? "bg-emerald-600 text-white border-emerald-400"
-                      : "bg-slate-800 text-slate-300 border-slate-700"
-                  }`}
-                >
-                  No Medical Alarm
-                </button>
-                <button
-                  onClick={() => {
-                    onUpdateCustomer({ medicalAlarm: true });
-                    alert(
-                      "IMPORTANT SERVICE DEPENDENCY: Customer has a medical alarm. Do not recommend changes that could interrupt service. Escalate to specialist team."
-                    );
-                  }}
-                  className={`px-3 py-1 rounded text-xs font-semibold border ${
-                    customer.medicalAlarm === true
-                      ? "bg-red-600 text-white border-red-400 animate-pulse"
-                      : "bg-slate-800 text-slate-300 border-slate-700"
-                  }`}
-                >
-                  ⚠️ YES — Medical Alarm Present
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Mobile Number</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 07123 456789"
-                  value={customer.mobile?.number || ""}
-                  onChange={(e) =>
-                    onUpdateCustomer({
-                      mobile: { ...customer.mobile, number: e.target.value },
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Mobile Type</label>
-                <select
-                  value={customer.mobile?.type || "PAYG"}
-                  onChange={(e) =>
-                    onUpdateCustomer({
-                      mobile: {
-                        ...customer.mobile,
-                        type: e.target.value as "PAYG" | "CONTRACT",
-                      },
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                >
-                  <option value="PAYG">Pay-As-You-Go</option>
-                  <option value="CONTRACT">Monthly Contract</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Mobile Network</label>
-                <input
-                  type="text"
-                  placeholder="e.g. EE, O2, Vodafone, Giffgaff"
-                  value={customer.mobile?.network || ""}
-                  onChange={(e) =>
-                    onUpdateCustomer({
-                      mobile: { ...customer.mobile, network: e.target.value },
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-sparta-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => onTransition("FINAL_REVIEW")}
-                className="bg-sparta-600 hover:bg-sparta-500 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5"
-              >
-                <span>Proceed to Final Review</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: FINAL_REVIEW */}
-        {state === "FINAL_REVIEW" && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Customer-Facing Final Review
-            </h3>
-
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Offer:</span>
-                <span className="font-bold text-sparta-300">Up to {config.maxDiscountPercent}% Direct Debit reduction</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Existing Service:</span>
-                <span className="font-bold text-emerald-400">Unchanged*</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Existing Contract:</span>
-                <span className="font-bold text-emerald-400">Unchanged*</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Equipment:</span>
-                <span className="font-bold text-emerald-400">Unchanged*</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Payment:</span>
-                <span className="font-bold text-sparta-300">Direct Debit to be reduced if eligible</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Eligibility:</span>
-                <span className="font-bold text-emerald-400">
-                  {dobEligibility.isEligible ? "Confirmed" : "Pending review"}
-                </span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-slate-400">Customer Terms:</span>
-                <span className="font-bold text-slate-200">Customer must review authorised terms</span>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => onTransition("END")}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-lg text-xs flex items-center gap-2 shadow-glow-emerald"
-              >
-                <span>Customer Confirms & Agrees → Close Call</span>
-                <Check className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: END / SUMMARY */}
-        {state === "END" && (
-          <div className="space-y-4 text-center py-6">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto mb-2">
-              <CheckCircle className="w-6 h-6" />
-            </div>
-            <h2 className="text-base font-bold text-white">Call Workflow Concluded</h2>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              All compliance steps, authorizations, and notes have been recorded in accordance with UK telecommunications standards.
-            </p>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {currentStage === "STAGE_11_NATURAL_CLOSE" ? (
+            <button
+              onClick={() => onEndCall("LEAD_COMPLETED")}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs md:text-sm font-bold flex items-center gap-2 shadow-glow-primary transition-all active:scale-95"
+            >
+              <Check className="w-4 h-4" />
+              <span>Complete Lead & Disposition</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              className="px-5 py-2.5 rounded-xl bg-sparta-600 hover:bg-sparta-500 text-white text-xs md:text-sm font-bold flex items-center gap-2 shadow-glow-primary transition-all active:scale-95"
+            >
+              <span>Next Step</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 };

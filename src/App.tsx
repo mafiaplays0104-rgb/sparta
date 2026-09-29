@@ -1,341 +1,349 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  CallState,
-  CustomerMood,
-  Customer,
+  MasterStage,
+  CustomerRecord,
   OfferConfig,
-  ConsentRecord,
-  DirectDebitTempData,
-  CallNotes,
-  CallMode,
-  EndReason,
+  CallDisposition,
   CallbackDetails,
+  CallAuditLog,
 } from "./types";
 import { initialOfferConfig } from "./data/initialOfferConfig";
-import { ConversationEngine, STATE_ORDER } from "./engine/conversationEngine";
+import { STAGES_LIST } from "./engine/masterScriptEngine";
+import { ScriptUnitEngine, ScriptUnit } from "./engine/scriptUnitEngine";
 import { Header } from "./components/Header";
 import { CallProgress } from "./components/CallProgress";
-import { ScriptPanel } from "./components/ScriptPanel";
 import { CustomerPanel } from "./components/CustomerPanel";
-import { ActionBar } from "./components/ActionBar";
-import { ObjectionModal } from "./components/ObjectionModal";
+import { ScriptRunner } from "./components/ScriptRunner";
+import { AssistantPanel } from "./components/AssistantPanel";
+import { DobCalculatorModal } from "./components/tools/DobCalculatorModal";
+import { BillCalculatorModal } from "./components/tools/BillCalculatorModal";
 import { CallbackModal } from "./components/CallbackModal";
 import { EscalationModal } from "./components/EscalationModal";
 import { CallSummaryModal } from "./components/CallSummaryModal";
 import { AdminModal } from "./components/AdminModal";
-import { QuickModeView } from "./components/QuickModeView";
-import { TrainingModeDrawer } from "./components/TrainingModeDrawer";
+import { TestRunnerModal } from "./components/TestRunnerModal";
 
 export const App: React.FC = () => {
-  // Core Call State
-  const [currentState, setCurrentState] = useState<CallState>("OPENING");
-  const [history, setHistory] = useState<CallState[]>([]);
-  const [completedStates, setCompletedStates] = useState<Set<CallState>>(new Set());
-
-  // Customer & Conversation Context
-  const [customer, setCustomer] = useState<Customer>({
-    serviceType: undefined,
-    issueStatus: undefined,
-  });
-  const [mood, setMood] = useState<CustomerMood>("COMFORTABLE");
+  // Master Configuration
   const [config, setConfig] = useState<OfferConfig>(initialOfferConfig);
-  const [callMode, setCallMode] = useState<CallMode>("PRODUCTION");
 
-  // Consents & Non-Persistent In-Memory Direct Debit
-  const [consents, setConsents] = useState<ConsentRecord[]>([
-    { category: "CALL", status: "GRANTED", timestamp: new Date().toLocaleTimeString() },
-  ]);
-  const [directDebitData, setDirectDebitData] = useState<DirectDebitTempData>({
-    accountHolderName: "",
-    sortCode: "",
-    accountNumber: "",
-    bankName: "",
-  });
+  // Live Customer Record
+  const [customer, setCustomer] = useState<CustomerRecord>({
+    title: "Mr",
+    firstName: "John",
+    lastName: "Smith",
+    doorNumber: "14",
+    street: "Highfield Road",
+    address: "14 Highfield Road",
+    postcode: "B33 8TH",
+    contactNumber: "0121 496 0123",
+    monthlyBill: 80.99,
+    billApproximate: true,
+    billIncludesPhone: true,
+    billIncludesBroadband: true,
+    billIncludesTv: false,
+    landlineUsage: "LOW",
+    medicalAlarm: false,
+    hasMobile: true,
+    mobileNumber: "07700 900123",
+    mobileType: "CONTRACT",
+    mobileNetwork: "EE",
+    customerIdPrefix: "IBANGB",
+  } as any);
 
-  // Call Notes & Outcomes
-  const [notes, setNotes] = useState<CallNotes>({
-    customerConcern: "",
-    followUp: "",
-    escalationReason: "",
-    generalNotes: "",
-  });
-  const [callbackDetails, setCallbackDetails] = useState<CallbackDetails | undefined>(undefined);
-  const [endReason, setEndReason] = useState<EndReason>("COMPLETED");
+  // Current Unit Index across the whole sequential call
+  const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
+  const [completedStages, setCompletedStages] = useState<Set<MasterStage>>(new Set());
+  const [overrideSayText, setOverrideSayText] = useState<string | undefined>();
 
-  // Modals & Panels Visibility
+  // Modals & Drawers Visibility
+  const [isDobCalcOpen, setIsDobCalcOpen] = useState(false);
+  const [isBillCalcOpen, setIsBillCalcOpen] = useState(false);
   const [isObjectionsOpen, setIsObjectionsOpen] = useState(false);
   const [isCallbackOpen, setIsCallbackOpen] = useState(false);
   const [isEscalationOpen, setIsEscalationOpen] = useState(false);
   const [isCallSummaryOpen, setIsCallSummaryOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isTrainingHelpOpen, setIsTrainingHelpOpen] = useState(false);
+  const [isTestRunnerOpen, setIsTestRunnerOpen] = useState(false);
 
-  // Dynamic calculation of current suggested response
-  const suggestedResponse = useMemo(() => {
-    return ConversationEngine.getSuggestedResponse(
-      currentState,
-      customer,
-      mood,
-      config,
-      consents
-    );
-  }, [currentState, customer, mood, config, consents]);
+  const [disposition, setDisposition] = useState<CallDisposition>("LEAD_COMPLETED");
+  const [callbackDetails, setCallbackDetails] = useState<CallbackDetails | undefined>();
+  const [auditLogs, setAuditLogs] = useState<CallAuditLog[]>([]);
 
-  // Transition to a new state with history tracking
-  const handleTransition = (nextState: CallState) => {
-    setHistory((prev) => [...prev, currentState]);
-    setCompletedStates((prev) => new Set(prev).add(currentState));
-    setCurrentState(nextState);
+  // Compute all structured units
+  const allUnits = useMemo(() => {
+    return ScriptUnitEngine.getAllUnits(customer, config);
+  }, [customer, config]);
 
-    // If reaching END state, display the Call Summary automatically
-    if (nextState === "END") {
+  const currentUnit: ScriptUnit = allUnits[currentUnitIndex] || allUnits[0];
+  const currentStage: MasterStage = currentUnit.stage;
+
+  // Track completed stages as we progress
+  useEffect(() => {
+    const currentStageIdx = STAGES_LIST.indexOf(currentStage);
+    const newCompleted = new Set<MasterStage>();
+    for (let i = 0; i < currentStageIdx; i++) {
+      newCompleted.add(STAGES_LIST[i]);
+    }
+    setCompletedStages(newCompleted);
+  }, [currentStage]);
+
+  // Navigation handlers
+  const handleNextUnit = () => {
+    setOverrideSayText(undefined);
+    if (currentUnitIndex < allUnits.length - 1) {
+      setCurrentUnitIndex((prev) => prev + 1);
+    } else {
       setIsCallSummaryOpen(true);
     }
   };
 
-  // Back button handler
-  const handleBack = () => {
-    if (history.length > 0) {
-      const prev = history[history.length - 1];
-      setHistory((old) => old.slice(0, -1));
-      setCurrentState(prev);
+  const handlePreviousUnit = () => {
+    setOverrideSayText(undefined);
+    if (currentUnitIndex > 0) {
+      setCurrentUnitIndex((prev) => prev - 1);
     }
   };
 
-  // Customer updates
-  const handleUpdateCustomer = (updated: Partial<Customer>) => {
+  const handleJumpToStage = (stage: MasterStage) => {
+    const targetIdx = allUnits.findIndex((u) => u.stage === stage);
+    if (targetIdx >= 0) {
+      setOverrideSayText(undefined);
+      setCurrentUnitIndex(targetIdx);
+    }
+  };
+
+  const handleUpdateCustomer = (updated: Partial<CustomerRecord>) => {
     setCustomer((prev) => ({ ...prev, ...updated }));
   };
 
-  // Consent Granting & Declining
-  const handleGrantConsent = (category: ConsentRecord["category"]) => {
-    setConsents((prev) => [
-      ...prev.filter((c) => c.category !== category),
-      { category, status: "GRANTED", timestamp: new Date().toLocaleTimeString() },
-    ]);
-  };
-
-  const handleDeclineConsent = (category: ConsentRecord["category"]) => {
-    setConsents((prev) => [
-      ...prev.filter((c) => c.category !== category),
-      { category, status: "DECLINED", timestamp: new Date().toLocaleTimeString() },
-    ]);
-    alert(
-      "Payment consent declined. Direct Debit collection locked in accordance with customer rights."
-    );
-  };
-
-  // Escalation & Callback handlers
-  const handleEscalateConfirm = (reason: string, extraNotes: string) => {
-    setNotes((prev) => ({
-      ...prev,
-      escalationReason: reason,
-      generalNotes: prev.generalNotes + (extraNotes ? ` | Escalation: ${extraNotes}` : ""),
-    }));
-    setEndReason("ESCALATED");
-    handleTransition("END");
-  };
-
-  const handleCallbackConfirm = (details: CallbackDetails) => {
-    setCallbackDetails(details);
-    setNotes((prev) => ({
-      ...prev,
-      followUp: `Callback on ${details.preferredDate} (${details.preferredTime})`,
-      generalNotes: prev.generalNotes + (details.advisorNotes ? ` | Callback notes: ${details.advisorNotes}` : ""),
-    }));
-    setEndReason("CALLBACK");
-    handleTransition("END");
-  };
-
-  // Ending call explicitly
-  const handleEndCall = (reason?: string) => {
-    if (reason) {
-      setNotes((prev) => ({
-        ...prev,
-        customerConcern: reason,
-      }));
-    }
-    setEndReason(
-      reason?.toLowerCase().includes("decline")
-        ? "CUSTOMER_DECLINED"
-        : reason?.toLowerCase().includes("not interested")
-        ? "CUSTOMER_DECLINED"
-        : "CUSTOMER_REQUESTED_END"
-    );
-    handleTransition("END");
-  };
-
-  // Reset / New Call
   const handleResetCall = () => {
-    setCurrentState("OPENING");
-    setHistory([]);
-    setCompletedStates(new Set());
-    setCustomer({});
-    setMood("COMFORTABLE");
-    setConsents([
-      { category: "CALL", status: "GRANTED", timestamp: new Date().toLocaleTimeString() },
-    ]);
-    setDirectDebitData({
-      accountHolderName: "",
-      sortCode: "",
-      accountNumber: "",
-      bankName: "",
-    });
-    setNotes({
-      customerConcern: "",
-      followUp: "",
-      escalationReason: "",
-      generalNotes: "",
-    });
+    setCurrentUnitIndex(0);
+    setCompletedStages(new Set());
+    setOverrideSayText(undefined);
     setCallbackDetails(undefined);
-    setEndReason("COMPLETED");
+    setCustomer({
+      title: "Mr",
+      firstName: "",
+      lastName: "",
+      doorNumber: "",
+      postcode: "",
+      monthlyBill: undefined,
+    });
     setIsCallSummaryOpen(false);
   };
 
-  const isSensitiveStage = currentState === "PAYMENT_CONSENT" || currentState === "PAYMENT_DETAILS";
-  const hasPaymentConsent = !!consents.find(
-    (c) => c.category === "PAYMENT" && c.status === "GRANTED"
-  );
-  const isDirectDebitRecorded =
-    !!directDebitData.sortCode && !!directDebitData.accountNumber;
+  const handleEndCall = (reason?: string) => {
+    if (reason === "DO_NOT_CALL") setDisposition("DO_NOT_CALL");
+    else if (reason === "WRONG_PERSON") setDisposition("WRONG_PERSON");
+    else if (reason?.includes("busy")) setDisposition("CUSTOMER_BUSY");
+    else if (reason?.includes("not interested")) setDisposition("CUSTOMER_NOT_INTERESTED");
+    else setDisposition("LEAD_COMPLETED");
+
+    setIsCallSummaryOpen(true);
+  };
+
+  const handleConfirmCallback = (details: CallbackDetails) => {
+    setCallbackDetails(details);
+    setDisposition("CALL_BACK_REQUESTED");
+    setIsCallSummaryOpen(true);
+  };
+
+  const handleConfirmEscalate = (_reason: string, _notes: string) => {
+    setDisposition("ESCALATED");
+    setIsCallSummaryOpen(true);
+  };
+
+  // Keyboard Navigation (ArrowRight/Enter -> Next, ArrowLeft -> Prev, O -> Objections, D -> DOB, S -> Savings, C -> Callback, Esc -> Close)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in an input
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA"
+      ) {
+        if (e.key === "Escape") {
+          (document.activeElement as HTMLElement).blur();
+        }
+        return;
+      }
+
+      if (e.key === "ArrowRight" || e.key === "Enter") {
+        e.preventDefault();
+        handleNextUnit();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePreviousUnit();
+      } else if (e.key === "o" || e.key === "O") {
+        e.preventDefault();
+        setIsObjectionsOpen((prev) => !prev);
+      } else if (e.key === "d" || e.key === "D") {
+        e.preventDefault();
+        setIsDobCalcOpen((prev) => !prev);
+      } else if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        setIsBillCalcOpen((prev) => !prev);
+      } else if (e.key === "c" || e.key === "C") {
+        e.preventDefault();
+        setIsCallbackOpen((prev) => !prev);
+      } else if (e.key === "Escape") {
+        setIsObjectionsOpen(false);
+        setIsDobCalcOpen(false);
+        setIsBillCalcOpen(false);
+        setIsCallbackOpen(false);
+        setIsEscalationOpen(false);
+        setIsCallSummaryOpen(false);
+        setIsAdminOpen(false);
+        setIsTestRunnerOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentUnitIndex, allUnits.length]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-sparta-500 selection:text-white">
-      {/* 1. TOP HEADER */}
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 font-sans selection:bg-sparta-500 selection:text-slate-950 overflow-hidden">
+      {/* 1. TOP HEADER (COMPACT & CLEAN) */}
       <Header
         config={config}
-        mood={mood}
-        callMode={callMode}
-        onCallModeChange={setCallMode}
+        currentStage={currentStage}
         onResetCall={handleResetCall}
         onOpenAdmin={() => setIsAdminOpen(true)}
         onOpenObjections={() => setIsObjectionsOpen(true)}
-        onOpenTrainingHelp={() => setIsTrainingHelpOpen(true)}
-        currentSayText={suggestedResponse.primary}
+        onOpenDobCalculator={() => setIsDobCalcOpen(true)}
+        onOpenBillCalculator={() => setIsBillCalcOpen(true)}
+        onOpenTestRunner={() => setIsTestRunnerOpen(true)}
       />
 
-      {/* 2. MAIN 3-COLUMN WORKSPACE */}
+      {/* 2. MAIN 3-COLUMN WORKSPACE (DOMINANT CENTRAL SCRIPT) */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT COLUMN: CALL PROGRESS (Hidden on small mobile) */}
-        <div className="hidden lg:block w-64 flex-shrink-0">
+        {/* LEFT COLUMN: CALL WORKFLOW (SIMPLIFIED) */}
+        <div className="hidden lg:block w-52 xl:w-56 flex-shrink-0">
           <CallProgress
-            currentState={currentState}
-            onSelectState={(state) => handleTransition(state)}
-            completedStates={completedStates}
+            currentStage={currentStage}
+            onSelectStage={handleJumpToStage}
+            completedStages={completedStages}
           />
         </div>
 
-        {/* CENTER COLUMN: LIVE SCRIPT OR QUICK MODE */}
-        {callMode === "QUICK" ? (
-          <QuickModeView
-            state={currentState}
-            suggestedResponse={suggestedResponse}
-            mood={mood}
-            onTransition={handleTransition}
-            onOpenObjections={() => setIsObjectionsOpen(true)}
-            onSwitchToProduction={() => setCallMode("PRODUCTION")}
-          />
-        ) : (
-          <ScriptPanel
-            state={currentState}
-            suggestedResponse={suggestedResponse}
-            customer={customer}
-            onUpdateCustomer={handleUpdateCustomer}
-            mood={mood}
-            config={config}
-            consents={consents}
-            onGrantConsent={handleGrantConsent}
-            onDeclineConsent={handleDeclineConsent}
-            onTransition={handleTransition}
-            onEscalate={(reason) => {
-              setNotes((prev) => ({ ...prev, escalationReason: reason }));
-              setIsEscalationOpen(true);
-            }}
-            onOpenObjections={() => setIsObjectionsOpen(true)}
-            onEndCall={handleEndCall}
-            callMode={callMode}
-            directDebitData={directDebitData}
-            onUpdateDirectDebitData={(d) =>
-              setDirectDebitData((prev) => ({ ...prev, ...d }))
-            }
-          />
-        )}
+        {/* CENTER COLUMN: SINGLE SCRIPT UNIT RUNNER (VISUAL DOMINANCE) */}
+        <ScriptRunner
+          unit={currentUnit}
+          unitIndexOverall={currentUnitIndex}
+          totalUnitsOverall={allUnits.length}
+          customer={customer}
+          config={config}
+          onUpdateCustomer={handleUpdateCustomer}
+          onNext={handleNextUnit}
+          onPrevious={handlePreviousUnit}
+          canGoNext={currentUnitIndex < allUnits.length - 1}
+          canGoPrevious={currentUnitIndex > 0}
+          onOpenDobCalculator={() => setIsDobCalcOpen(true)}
+          onOpenBillCalculator={() => setIsBillCalcOpen(true)}
+          onOpenObjections={() => setIsObjectionsOpen(true)}
+          onEndCall={handleEndCall}
+          overrideSayText={overrideSayText}
+          onClearOverrideSayText={() => setOverrideSayText(undefined)}
+        />
 
-        {/* RIGHT COLUMN: CUSTOMER PANEL (Hidden on tablet/mobile if needed) */}
-        <div className="hidden md:block w-80 lg:w-88 flex-shrink-0">
+        {/* RIGHT COLUMN: COMPACT CUSTOMER INFORMATION */}
+        <div className="hidden md:block w-64 xl:w-72 flex-shrink-0">
           <CustomerPanel
             customer={customer}
-            mood={mood}
-            onMoodChange={setMood}
-            notes={notes}
-            onUpdateNotes={(n) => setNotes((prev) => ({ ...prev, ...n }))}
-            consents={consents}
-            isDirectDebitRecorded={isDirectDebitRecorded}
+            config={config}
+            onOpenDobCalculator={() => setIsDobCalcOpen(true)}
+            onOpenBillCalculator={() => setIsBillCalcOpen(true)}
           />
         </div>
       </div>
 
-      {/* 3. ALWAYS AVAILABLE BOTTOM ACTION BAR */}
-      <ActionBar
-        currentState={currentState}
-        onBack={handleBack}
-        onOpenWhy={() => {
-          alert(`WHY AM I ASKING THIS?\n\n${suggestedResponse.why}`);
-        }}
-        onOpenObjections={() => setIsObjectionsOpen(true)}
-        onOpenCallback={() => setIsCallbackOpen(true)}
-        onOpenEscalate={() => setIsEscalationOpen(true)}
-        onEndCall={() => setIsCallSummaryOpen(true)}
-        onRequestConsent={() => {
-          handleGrantConsent("PAYMENT");
-          handleTransition("PAYMENT_DETAILS");
-        }}
-        isSensitiveStage={isSensitiveStage}
-        hasConsent={hasPaymentConsent}
-      />
+      {/* 3. MINIMAL CALL STATUS BAR */}
+      <div className="bg-slate-900/90 border-t border-slate-800/80 px-4 py-1.5 flex items-center justify-between text-[11px] text-slate-400 select-none">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <span>Live Call Active</span>
+          <span className="text-slate-600">•</span>
+          <span className="font-mono text-slate-300">Unit {currentUnitIndex + 1} of {allUnits.length}</span>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-3 text-slate-500 font-mono text-[10px]">
+          <span>Shortcuts: Enter=Next • Left=Back • O=Objections • D=DOB • S=Savings • C=Callback</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsCallbackOpen(true)}
+            className="hover:text-amber-300 transition-colors"
+          >
+            [Callback]
+          </button>
+          <span className="text-slate-700">|</span>
+          <button
+            onClick={() => handleEndCall("LEAD_COMPLETED")}
+            className="text-rose-400 hover:text-rose-300 font-bold transition-colors"
+          >
+            [End Call]
+          </button>
+        </div>
+      </div>
 
       {/* 4. MODALS & DRAWERS */}
-      <ObjectionModal
+      {/* Objections Collapsible Drawer */}
+      <AssistantPanel
         isOpen={isObjectionsOpen}
         onClose={() => setIsObjectionsOpen(false)}
-        onSelectResponse={(text) => {
-          // When advisor selects an objection response, prompt or apply to current call
-          setIsObjectionsOpen(false);
-        }}
+        onApplyObjectionResponse={(text) => setOverrideSayText(text)}
       />
 
+      {/* DOB & Age Calculator Modal */}
+      <DobCalculatorModal
+        isOpen={isDobCalcOpen}
+        onClose={() => setIsDobCalcOpen(false)}
+        config={config}
+        currentDob={customer.dob}
+        onApplyDob={(dobData) => handleUpdateCustomer(dobData)}
+      />
+
+      {/* Bill Reduction & 30% Savings Calculator Modal */}
+      <BillCalculatorModal
+        isOpen={isBillCalcOpen}
+        onClose={() => setIsBillCalcOpen(false)}
+        config={config}
+        currentAmount={customer.monthlyBill}
+        onApplyBill={(billData) => handleUpdateCustomer(billData)}
+      />
+
+      {/* Callback Modal */}
       <CallbackModal
         isOpen={isCallbackOpen}
         onClose={() => setIsCallbackOpen(false)}
-        onConfirmCallback={handleCallbackConfirm}
-        customerName={
-          customer.firstName || customer.lastName
-            ? `${customer.firstName || ""} ${customer.lastName || ""}`
-            : undefined
-        }
-        customerPhone={customer.landline || customer.mobile?.number}
+        onConfirmCallback={handleConfirmCallback}
+        customerName={customer.firstName || customer.lastName ? `${customer.firstName || ""} ${customer.lastName || ""}` : undefined}
+        customerPhone={customer.contactNumber || customer.mobileNumber}
       />
 
+      {/* Escalation Modal */}
       <EscalationModal
         isOpen={isEscalationOpen}
         onClose={() => setIsEscalationOpen(false)}
-        onConfirmEscalate={handleEscalateConfirm}
-        defaultReason={notes.escalationReason}
+        onConfirmEscalate={handleConfirmEscalate}
       />
 
+      {/* Call Summary / Disposition Modal */}
       <CallSummaryModal
         isOpen={isCallSummaryOpen}
-        endReason={endReason}
+        onClose={() => setIsCallSummaryOpen(false)}
         customer={customer}
         config={config}
-        notes={notes}
-        consents={consents}
+        disposition={disposition}
+        onSelectDisposition={setDisposition}
         callbackDetails={callbackDetails}
-        isDirectDebitRecorded={isDirectDebitRecorded}
+        auditLogs={auditLogs}
         onResetCall={handleResetCall}
-        onClose={() => setIsCallSummaryOpen(false)}
       />
 
+      {/* Admin Modal */}
       <AdminModal
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
@@ -343,15 +351,10 @@ export const App: React.FC = () => {
         onSaveConfig={(newConfig) => setConfig(newConfig)}
       />
 
-      <TrainingModeDrawer
-        isOpen={isTrainingHelpOpen || callMode === "TRAINING"}
-        onClose={() => {
-          setIsTrainingHelpOpen(false);
-          if (callMode === "TRAINING") setCallMode("PRODUCTION");
-        }}
-        state={currentState}
-        suggestedResponse={suggestedResponse}
-        mood={mood}
+      {/* Test Runner Modal */}
+      <TestRunnerModal
+        isOpen={isTestRunnerOpen}
+        onClose={() => setIsTestRunnerOpen(false)}
         config={config}
       />
     </div>

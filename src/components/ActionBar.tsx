@@ -1,118 +1,171 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
-  HelpCircle,
-  ArrowLeft,
-  Calendar,
-  AlertTriangle,
-  PhoneOff,
-  ShieldAlert,
-  Info,
+  ChevronLeft,
   ChevronRight,
-  Sparkles,
+  HelpCircle,
+  PhoneForwarded,
+  PhoneOff,
+  Calendar,
+  Percent,
+  Keyboard,
+  FileCheck,
 } from "lucide-react";
-import { CallState } from "../types";
+import { MasterStage } from "../types";
+import { STAGES_LIST } from "../engine/masterScriptEngine";
 
 interface ActionBarProps {
-  currentState: CallState;
-  onBack: () => void;
-  onOpenWhy: () => void;
+  currentStage: MasterStage;
+  onPrevious: () => void;
+  onNext: () => void;
   onOpenObjections: () => void;
   onOpenCallback: () => void;
-  onOpenEscalate: () => void;
+  onOpenDobCalculator: () => void;
+  onOpenBillCalculator: () => void;
   onEndCall: () => void;
-  onRequestConsent?: () => void;
-  isSensitiveStage: boolean;
-  hasConsent: boolean;
 }
 
 export const ActionBar: React.FC<ActionBarProps> = ({
-  currentState,
-  onBack,
-  onOpenWhy,
+  currentStage,
+  onPrevious,
+  onNext,
   onOpenObjections,
   onOpenCallback,
-  onOpenEscalate,
+  onOpenDobCalculator,
+  onOpenBillCalculator,
   onEndCall,
-  onRequestConsent,
-  isSensitiveStage,
-  hasConsent,
 }) => {
-  return (
-    <footer className="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 py-2.5 sticky bottom-0 z-40 shadow-lg">
-      <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2">
-        {/* Left Action Cluster: Navigation & Context Help */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onBack}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
-            title="Go back to previous stage"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>[BACK]</span>
-          </button>
+  const currentIndex = STAGES_LIST.indexOf(currentStage);
+  const canGoBack = currentIndex > 0;
+  const isFinalStage = currentStage === "STAGE_11_NATURAL_CLOSE";
 
+  // Global Keyboard Shortcuts (1-9)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is actively typing in input or textarea
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA"
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case "1":
+          e.preventDefault();
+          if (canGoBack) onPrevious();
+          break;
+        case "4":
+          e.preventDefault();
+          onOpenObjections();
+          break;
+        case "5":
+          e.preventDefault();
+          onOpenDobCalculator();
+          break;
+        case "6":
+          e.preventDefault();
+          onOpenBillCalculator();
+          break;
+        case "7":
+          e.preventDefault();
+          onNext();
+          break;
+        case "8":
+          e.preventDefault();
+          onOpenCallback();
+          break;
+        case "9":
+          e.preventDefault();
+          onEndCall();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canGoBack, onPrevious, onNext, onOpenObjections, onOpenCallback, onOpenDobCalculator, onOpenBillCalculator, onEndCall]);
+
+  return (
+    <nav aria-label="Call controls" className="bg-slate-900 border-t border-slate-800 px-4 py-2.5 text-xs text-slate-300">
+      <div className="max-w-[1700px] mx-auto flex flex-wrap items-center justify-between gap-2">
+        {/* Left: Quick Actions */}
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={onOpenWhy}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
-            title="Display 'Why am I asking this?'"
+            onClick={onPrevious}
+            disabled={!canGoBack}
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 font-medium flex items-center gap-1 border border-slate-700 transition-all"
+            title="Shortkey [1]"
           >
-            <Info className="w-3.5 h-3.5 text-sparta-400" />
-            <span>[WHY?]</span>
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>[1] Previous</span>
           </button>
 
           <button
             onClick={onOpenObjections}
-            className="px-3 py-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 border border-amber-600/40 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
-            title="Access UK Customer Objection Library"
+            className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1"
+            title="Shortkey [4]"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>[OBJECTION]</span>
+            <span>[4] Objections</span>
+          </button>
+
+          <button
+            onClick={onOpenDobCalculator}
+            className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium flex items-center gap-1"
+            title="Shortkey [5]"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>[5] DOB Tool</span>
+          </button>
+
+          <button
+            onClick={onOpenBillCalculator}
+            className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium flex items-center gap-1"
+            title="Shortkey [6]"
+          >
+            <Percent className="w-3.5 h-3.5" />
+            <span>[6] 30% Savings</span>
           </button>
         </div>
 
-        {/* Center Sensitive Payment Gate Action (if at consent stage) */}
-        {isSensitiveStage && !hasConsent && onRequestConsent && (
-          <div className="animate-bounce">
-            <button
-              onClick={onRequestConsent}
-              className="px-4 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-glow-amber border border-amber-300"
-            >
-              <ShieldAlert className="w-4 h-4" />
-              <span>[REQUEST CONSENT] REQUIRED TO PROCEED</span>
-            </button>
-          </div>
-        )}
+        {/* Center: Keyboard hint */}
+        <div className="hidden lg:flex items-center gap-1 text-[11px] text-slate-500 font-mono">
+          <Keyboard className="w-3 h-3 text-slate-400" />
+          <span>Shortcuts: 1=Back, 4=Objections, 5=DOB, 6=Savings, 7=Next, 8=Callback, 9=End</span>
+        </div>
 
-        {/* Right Action Cluster: Branching, Supervisor & Terminate */}
+        {/* Right: Progress & End */}
         <div className="flex items-center gap-2">
           <button
             onClick={onOpenCallback}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
-            title="Schedule a callback at customer's preferred day & time"
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium flex items-center gap-1"
+            title="Shortkey [8]"
           >
-            <Calendar className="w-3.5 h-3.5 text-blue-400" />
-            <span>[CALLBACK]</span>
+            <PhoneForwarded className="w-3.5 h-3.5 text-sparta-400" />
+            <span>[8] Callback</span>
           </button>
 
           <button
-            onClick={onOpenEscalate}
-            className="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 text-red-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-red-700/50"
-            title="Escalate call to Senior Supervisor"
+            onClick={onNext}
+            className="px-4 py-1.5 rounded-lg bg-sparta-600 hover:bg-sparta-500 text-white font-bold flex items-center gap-1 shadow-sm"
+            title="Shortkey [7]"
           >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>[ESCALATE]</span>
+            <span>{isFinalStage ? "Finish" : "[7] Next"}</span>
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
 
           <button
             onClick={onEndCall}
-            className="px-3 py-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm ml-1"
-            title="Conclude call and display summary"
+            className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 font-bold flex items-center gap-1"
+            title="Shortkey [9]"
           >
             <PhoneOff className="w-3.5 h-3.5" />
-            <span>[END CALL]</span>
+            <span>[9] Disposition</span>
           </button>
         </div>
       </div>
-    </footer>
+    </nav>
   );
 };

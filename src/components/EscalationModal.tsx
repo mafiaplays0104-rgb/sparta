@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, AlertTriangle, UserCheck, ShieldAlert, ArrowRight } from "lucide-react";
+import { X, AlertOctagon, ArrowRight, ShieldAlert } from "lucide-react";
 
 interface EscalationModalProps {
   isOpen: boolean;
@@ -14,22 +14,10 @@ export const EscalationModal: React.FC<EscalationModalProps> = ({
   onConfirmEscalate,
   defaultReason,
 }) => {
-  const [reason, setReason] = useState(
-    defaultReason || "Customer expresses significant confusion / vulnerability"
-  );
+  const [reason, setReason] = useState(defaultReason || "Customer reported line or broadband fault");
   const [notes, setNotes] = useState("");
 
   if (!isOpen) return null;
-
-  const reasons = [
-    "Customer expresses significant confusion / vulnerability",
-    "Medical alarm or life-critical service dependency connected",
-    "Active physical landline / broadband service fault reported",
-    "Customer explicitly requested speaking with a supervisor",
-    "Customer highly suspicious; needs formal verification officer",
-    "Payment verification cannot be safely conducted on this call",
-    "Information requested by customer is unavailable in current system",
-  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,23 +27,22 @@ export const EscalationModal: React.FC<EscalationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-red-950/30">
+        <div className="p-4 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4" />
+              <AlertOctagon className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Senior Supervisor Escalation
-              </h2>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                Escalate To Senior Team
+              </h3>
               <p className="text-[11px] text-slate-400">
-                Warm, responsible handover when specialist care is warranted.
+                Route complex technical faults or security cases for specialist care
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
             className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -64,66 +51,53 @@ export const EscalationModal: React.FC<EscalationModalProps> = ({
           </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
-          {/* Spoken Handoff Script */}
-          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-            <span className="text-[10px] font-bold text-sparta-400 uppercase tracking-wider block mb-1">
-              SUGGESTED ADVISOR SCRIPT
-            </span>
-            <p className="text-white text-xs leading-relaxed italic">
-              "Right, I understand. In that case, I'd rather make sure you're speaking to the right person who can properly deal with that for you. I'll arrange for this to be passed to a senior member of the team."
-            </p>
-          </div>
-
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5 text-xs">
           <div>
-            <label className="text-slate-400 block mb-1 font-medium">
-              Reason for Escalation:
-            </label>
+            <label className="text-slate-300 font-medium block mb-1">Escalation Reason</label>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-red-500 focus:outline-none"
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white focus:border-red-500 focus:outline-none"
             >
-              {reasons.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
+              <option value="Customer reported line or broadband fault">Customer reported line or broadband fault</option>
+              <option value="Medical alarm / life safety priority care">Medical alarm / life safety priority care</option>
+              <option value="Complex billing / tariff dispute">Complex billing / tariff dispute</option>
+              <option value="High-tier security or independent verification request">High-tier security or independent verification request</option>
+              <option value="Customer requested senior manager callback">Customer requested senior manager callback</option>
             </select>
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1 font-medium">
-              Specific Handover Briefing:
-            </label>
+            <label className="text-slate-300 font-medium block mb-1">Detailed Situation Notes</label>
             <textarea
-              placeholder="e.g. Caller mentioned lifeline pendant connected to hall socket; stopped sales conversation immediately..."
+              rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white h-20 focus:border-red-500 focus:outline-none resize-none"
+              placeholder="e.g. Total loss of dial tone for 48 hours, customer needs priority engineer review..."
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white focus:border-red-500 focus:outline-none"
             />
           </div>
 
-          <div className="p-2.5 rounded bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] flex items-center gap-1.5">
+          <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-[11px] flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-            <span>Compliance rule: Do NOT invent promises, engineer dates, or compensation.</span>
+            <span>Never promise specific engineer visit arrival times or compensation figures.</span>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="pt-2 flex items-center justify-between">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium"
+              className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md"
             >
-              <UserCheck className="w-4 h-4" />
-              <span>Confirm Supervisor Handover</span>
+              <span>Confirm Escalation Handoff</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </form>
