@@ -1,68 +1,105 @@
-# SPARTA — Live Call Assistant (V2)
+# UK TELECOM — 30% BILL REDUCTION CALL SCRIPT TOOL (SPARTA)
 
-SPARTA is a real-time call-flow copilot for UK telephone-services sales and customer support conversations. Designed specifically to help advisors conduct a **natural, calm, friendly, easy-to-follow conversation**, especially with older UK consumers, while strictly maintaining Ofcom compliance, transparency, and data security.
+SPARTA is a real-time call-flow copilot built specifically for the **UK Telecom — 30% Bill Reduction Call Script**. It guides advisors (e.g. Peter) through live conversations with UK consumers, ensuring strict compliance, transparency, respectful pacing, and immediate objection resolution across all 52 script sections.
 
 ---
 
-## Key Features & Architecture
+## The Golden Rule
+> **Keep every spoken section short.**
+> **One idea → one short paragraph → one question.**
+> Don't overwhelm the customer with the entire offer at once. Let them respond after each short section.
 
-### 1. Finite-State Conversation Engine
-- Complete, non-rigid 16-stage finite-state machine:
-  - `OPENING` & `BILL_RESPONSIBILITY` (Natural identification, no artificial small talk)
-  - `RAPPORT` (1-sentence authentic responses)
-  - `SERVICE_DISCOVERY` (Landline voice only vs Broadband bundles)
-  - `ISSUE_CHECK` & `ISSUE_ESCALATION` (Service health screening prior to commercial discussion)
-  - `BILL_DISCOVERY` (Baseline payment estimation & saving calculations)
-  - `OFFER_INTRO` & `OFFER_EXPLANATION` (Up to 30% reduction; clear 4-pillar reassurance on unchanged service, contract, & hardware)
-  - `OFFER_INTEREST` ("Does that make sense so far?" — no aggressive sales closing)
-  - `ELIGIBILITY` (DOB age bracket verification against 1943–1960 campaign rules)
-  - `CUSTOMER_DETAILS` (Sequential, unhurried name and address capture)
-  - `PAYMENT_CONSENT` (Mandatory regulatory gate with 6 core disclosure rules)
-  - `PAYMENT_DETAILS` (Direct Debit Sort Code & Account Number validation & masking)
-  - `ADDITIONAL_DETAILS` (Screening for medical alarms & lifeline pendants)
-  - `FINAL_REVIEW` (Transparent customer confirmation)
-  - `CLOSE` & `CALL_SUMMARY` (Sanitized audit summary without sensitive banking data)
+---
 
-### 2. Multi-Version Script Lines & Audio Cadence
-- Every core step provides three calibrated variants:
-  - **PRIMARY**: Natural, full British English sentence.
-  - **SHORT**: Crisp version for impatient or busy callers.
-  - **EXPLAIN**: Slower, clearer version for confused or elderly customers.
-- Interactive switching buttons: `[USE LINE]`, `[SHORTEN]`, `[SLOW DOWN]`, `[EXPLAIN]`, `[WHY?]`.
-- Speech Cadence Preview (`Listen Cadence` button) leveraging browser speech synthesis with British English pacing.
+## Live Call Flow Architecture
 
-### 3. Adaptive Customer Mood & Pacing Engine
-- 7 conversation behavior modes:
-  - 😊 **Comfortable**: Standard calm British pace.
-  - 🐢 **Elderly / Slow Pace**: 1 question per step, shorter sentences, gentle pauses.
-  - ❓ **Confused**: Immediate reassurance that equipment and provider stay identical.
-  - 🛡️ **Suspicious**: Focus on privacy, no card numbers, and independent verification.
-  - ⏱️ **Impatient**: Skips pleasantries, leads with the commercial benefit.
-  - 💬 **Talkative**: Includes polite redirection buttons (`[LET THEM FINISH]`, `[BRING BACK TO CALL]`, `[ACKNOWLEDGE + CONTINUE]`).
-  - ⚠️ **Vulnerability Concern**: Automatic supervisor escalation trigger.
+```
+[ OPEN ]
+  ↓
+  30% bill reduction announcement (Section 1)
+  ↓
+  Customer interested?
+    ├── YES (Section 1) ──→ Verify account
+    ├── NO (Section 3) ───→ Brief explanation ──→ Respect decision
+    ├── QUESTION (Sec 47) → Answer ────────────→ Return to flow
+    ├── CONFUSED (Sec 13) → Simplify ──────────→ Continue
+    └── STOP (Sec 52) ────→ End call
 
-### 4. 18+ UK Objection Resolution Library
-- Searchable objection directory addressing real customer hesitations:
-  - *Not Interested*, *Too Busy*, *Is this a scam?*, *Why do you need bank details?*, *Why DOB?*, *I don't want to change my contract*, *Send it in writing*, *I need to speak to my family*, *What exactly changes?*, etc.
-  - Each item includes Primary response, Short version, Explanation, Next action, and Hard Stop conditions (e.g. never argue, never say "definitely not a scam").
+[ VERIFY ]
+  ↓
+  Consumer Identification Number (Section 7)
+  ↓
+  Verification Completed (Section 8)
+  ↓
+  Current Service — Home telephone check (Section 9)
+  ↓
+  Current Monthly Bill discovery (Section 10)
+  ↓
+  Explaining the Reduction & 30% savings (Section 11)
+  ↓
+  Final Confirmation (Section 45)
+  ↓
+  Before Any Agreement — price, service, terms clarity (Section 46)
+  ↓
+  Customer Decision (Sections 48 / 49 / Close)
+```
 
-### 5. Multi-View Operational Modes
-- 🎯 **Production Mode**: Full balanced co-pilot view with live script, progress, checklist, and advisor notes.
-- ⚡ **Quick Mode**: Minimalist view with Objective, Say, and Next Action for high-velocity advisors.
-- 🎓 **Training Mode**: Deep coaching drawer explaining why each question is asked, required fields, and what NOT to say.
+---
 
-### 6. Strict Payment Data Security & Guardrails
-- Direct Debit only (Sort Code XX-XX-XX and Account Number 8 digits).
-- **Hard-coded strict prohibition**: Never collects Card numbers, CVV, PINs, OTPs, or online banking passwords.
-- Volatile in-memory handling: Payment data is never written to `localStorage`, `sessionStorage`, browser logs, console, or client telemetry.
-- Automated PCI sanitizer redacts card patterns and security codes from advisor notes.
+## 52-Section Script Directory
 
-### 7. Configurable Admin Governance & Script Versioning
-- Admin modal (`Settings` icon) allowing authorized changes to:
-  - Campaign name and script version (e.g. `v2.0.0` -> `v2.1.0` publishing).
-  - Maximum discount percentage cap.
-  - Eligibility DOB brackets.
-  - Authorized commercial wording to prevent advisor guesswork.
+1. **OPENING**: Announcement of up to 30% reduction, checking eligibility, time commitment.
+2. **CUSTOMER WANTS TO KNOW WHO YOU ARE**: “Who are you calling from?”, “Are you from BT?”, authorized representations.
+3. **CUSTOMER SAYS “I'M NOT INTERESTED”**: Soft explanation, zero-pressure exit.
+4. **CUSTOMER SAYS “I'M BUSY”**: Brief account check, callback offering.
+5. **CUSTOMER SAYS “HOW MUCH WILL I SAVE?”**: Up to 30% reduction explanation.
+6. **CUSTOMER SAYS “IS THIS A NEW CONTRACT?”**: Current service comparison.
+7. **CONSUMER IDENTIFICATION NUMBER**: Account verification transition, why needed, where to find, refusal handling.
+8. **VERIFICATION COMPLETED**: Acknowledgment and transition to service discovery.
+9. **CURRENT SERVICE**: Home telephone line confirmation (Yes / No / Don't know).
+10. **CURRENT MONTHLY BILL**: Rough monthly payment discovery.
+11. **EXPLAINING THE REDUCTION**: Service-based monthly reduction explanation.
+12. **CUSTOMER IS INTERESTED**: Smooth transition to remaining details.
+13. **CUSTOMER IS CONFUSED**: Simplification and clarification.
+14. **CUSTOMER INTERRUPTS**: Active listening and question answering.
+15. **CUSTOMER GOES OFF TOPIC**: Polite acknowledgment and redirection.
+16. **CUSTOMER SAYS “I ALREADY HAVE A DISCOUNT”**: Factoring existing rate into review.
+17. **CUSTOMER SAYS “MY BILL IS ALREADY CHEAP”**: Checking whether further savings apply.
+18. **CUSTOMER SAYS “I DON'T TRUST PHONE CALLS”**: Privacy reassurance, explaining each detail.
+19. **CUSTOMER ASKS FOR A WEBSITE**: Independent online verification support.
+20. **CUSTOMER SAYS “I'LL CALL MY PROVIDER”**: Respectful transfer/exit.
+21. **CUSTOMER SAYS “CALL ME LATER”**: Preferred callback scheduling.
+22. **CUSTOMER SAYS “I'M NOT THE ACCOUNT HOLDER”**: Data protection compliance stop.
+23. **CUSTOMER SAYS “THE ACCOUNT IS IN MY PARTNER'S NAME”**: Non-account holder privacy protection.
+24. **CUSTOMER SAYS “I DON'T WANT TO GIVE MY DATE OF BIRTH”**: Voluntary verification respect.
+25. **CUSTOMER SAYS “WHY DO YOU NEED MY DATE OF BIRTH?”**: Account matching rationale.
+26. **CUSTOMER SAYS “I DON'T HAVE MY BILL”**: Continuation with available information.
+27. **CUSTOMER ASKS “IS THIS A SCAM?”**: Independent verification offer without argument.
+28. **CUSTOMER ASKS FOR YOUR NAME**: Peter from [COMPANY NAME].
+29. **CUSTOMER ASKS FOR YOUR EMPLOYEE NUMBER**: [APPROVED ID] reference.
+30. **CUSTOMER SAYS “I WANT TO THINK ABOUT IT”**: Understanding reassurance.
+31. **CUSTOMER SAYS “I NEED TO SPEAK TO MY FAMILY”**: Encouraging household consultation.
+32. **CUSTOMER SAYS “I'M HAPPY WITH MY CURRENT PROVIDER”**: No-pressure evaluation.
+33. **CUSTOMER SAYS “WILL MY NUMBER CHANGE?”**: Unchanged service and portability clarity.
+34. **CUSTOMER SAYS “WILL MY SERVICE STOP?”**: Continuity guarantee.
+35. **CUSTOMER ASKS ABOUT CONTRACT**: Current terms review.
+36. **CUSTOMER SAYS “I DON'T WANT A CONTRACT”**: Contract requirement transparency.
+37. **CUSTOMER SAYS “JUST SEND ME SOMETHING”**: Written documentation guidance.
+38. **CUSTOMER SAYS “I DON'T WANT TO GIVE BANK DETAILS”**: Financial privacy respect.
+39. **CUSTOMER ASKS “WHY DO YOU NEED BANK DETAILS?”**: Clear purpose explanation before asking.
+40. **CUSTOMER BECOMES ANGRY**: Immediate polite de-escalation and exit.
+41. **CUSTOMER SAYS “REMOVE MY NUMBER”**: Immediate suppression / DO_NOT_CALL.
+42. **CUSTOMER SAYS “STOP CALLING ME”**: Immediate cessation.
+43. **CUSTOMER WANTS TO END THE CALL**: Polite departure.
+44. **CUSTOMER AGREES TO CONTINUE**: Step-by-step progression.
+45. **FINAL CONFIRMATION**: Reduction and key terms review.
+46. **BEFORE ANY AGREEMENT**: Full clarity on price, service, and terms.
+47. **CUSTOMER HAS A QUESTION**: Prioritizing question before resuming.
+48. **CUSTOMER SAYS YES**: Orderly confirmation and next step.
+49. **CUSTOMER SAYS NO**: Immediate respect and closing.
+50. **CUSTOMER SAYS “I'M NOT SURE”**: Clarifying uncertainty.
+51. **CUSTOMER ASKS YOU TO REPEAT**: Slower, simplified repetition.
+52. **HARD STOP / COMPLIANCE**: Mandatory regulatory directives.
 
 ---
 

@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Copy,
   Check,
   ChevronRight,
   ChevronLeft,
-  Info,
-  AlertTriangle,
-  ShieldCheck,
-  Calendar,
-  Percent,
   Sparkles,
-  ArrowRight,
   AlertOctagon,
+  Percent,
+  RotateCcw,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
   HelpCircle,
   Calculator,
-  RotateCcw,
 } from "lucide-react";
 import {
   MasterStage,
@@ -48,14 +46,14 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
   currentStage,
   customer,
   onUpdateCustomer,
-  sentiment,
+  sentiment: _sentiment,
   onSentimentChange,
   config,
   onTransition,
-  onOpenDobCalculator,
+  onOpenDobCalculator: _onOpenDobCalculator,
   onOpenBillCalculator,
-  onOpenObjections,
-  onOpenCallback,
+  onOpenObjections: _onOpenObjections,
+  onOpenCallback: _onOpenCallback,
   onEndCall,
   overrideSayText,
   onClearOverrideSayText,
@@ -105,21 +103,15 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
       updates.monthlyBill = extracted.monthlyBill;
       updates.billApproximate = extracted.billApproximate;
     }
-    if (extracted.landlineUsage !== undefined) {
-      updates.landlineUsage = extracted.landlineUsage;
+    if (extracted.isUsingAtHome !== undefined) {
+      updates.isUsingAtHome = extracted.isUsingAtHome;
     }
-    if (extracted.billIncludesBroadband !== undefined) {
-      updates.billIncludesBroadband = extracted.billIncludesBroadband;
+    if (extracted.consumerId !== undefined) {
+      updates.consumerId = extracted.consumerId;
+      updates.consumerIdStatus = "VERIFIED";
     }
-    if (extracted.billIncludesTv !== undefined) {
-      updates.billIncludesTv = extracted.billIncludesTv;
-      updates.hasTvService = extracted.hasTvService;
-    }
-    if (extracted.medicalAlarm !== undefined) {
-      updates.medicalAlarm = extracted.medicalAlarm;
-    }
-    if (extracted.hasMobile !== undefined) {
-      updates.hasMobile = extracted.hasMobile;
+    if (extracted.customerDecision !== undefined) {
+      updates.customerDecision = extracted.customerDecision;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -164,7 +156,7 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div>
           <span className="text-[10px] font-bold tracking-wider text-sparta-400 uppercase block mb-0.5">
-            CURRENT STEP • STAGE {stageDef.stageNumber} OF 11
+            CURRENT STEP • STAGE {stageDef.stageNumber} OF {STAGES_LIST.length}
           </span>
           <h1 className="text-base md:text-lg font-black text-white tracking-tight">
             {stageDef.stageName}
@@ -184,9 +176,19 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
           )}
 
           <div className="text-xs font-mono px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
-            Stage {stageDef.stageNumber} / 11
+            Step {stageDef.stageNumber} / {STAGES_LIST.length}
           </div>
         </div>
+      </div>
+
+      {/* GOLDEN RULE BADGE */}
+      <div className="px-3.5 py-2 rounded-xl bg-sparta-950/80 border border-sparta-500/30 text-sparta-300 text-xs flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-sparta-400 animate-pulse"></span>
+          <span className="font-bold uppercase tracking-wider text-[10px] text-sparta-400">GOLDEN RULE:</span>
+          <span>Keep every spoken section short. <strong>One idea → one short paragraph → one question.</strong></span>
+        </div>
+        <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">Up to 30% Reduction</span>
       </div>
 
       {/* 2. PROHIBITED INFORMATION BANNER (SECURITY GUARD) */}
@@ -202,7 +204,14 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
         </div>
       )}
 
-      {/* 3. MAIN "SAY THIS" APPROVED MASTER SCRIPT CARD */}
+      {/* CONFLICT WARNING */}
+      {conflictWarning && (
+        <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs">
+          <strong>Clarification needed:</strong> {conflictWarning}
+        </div>
+      )}
+
+      {/* 3. MAIN "SAY THIS" APPROVED SCRIPT CARD */}
       <div className="bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-sparta-500/50 rounded-2xl p-5 md:p-6 relative shadow-xl">
         <div className="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
           <div className="flex items-center gap-2">
@@ -210,7 +219,7 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
               SAY THIS
             </span>
             <span className="text-xs text-slate-400 font-mono">
-              Exact Master Script (Rule 2: Do Not Paraphrase)
+              UK Telecom 30% Bill Reduction Call Script
             </span>
           </div>
 
@@ -227,7 +236,7 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
         </div>
 
         {/* Verbatim Script Text */}
-        <div className="text-lg md:text-xl text-white font-semibold leading-relaxed tracking-normal whitespace-pre-line select-text font-sans">
+        <div className="text-lg md:text-xl text-white font-medium leading-relaxed tracking-normal whitespace-pre-line select-text font-sans">
           {sayText}
         </div>
 
@@ -252,14 +261,14 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
           rows={2}
           value={customerResponseText}
           onChange={(e) => handleCustomerTextChange(e.target.value)}
-          placeholder="Type or paste what the customer said (e.g. 'I pay about £80.99 and that includes broadband...')"
+          placeholder="Type or paste customer words (e.g. 'I'm paying around £65 and yes it's at home...')"
           className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs md:text-sm text-white focus:border-sparta-500 focus:outline-none placeholder:text-slate-500"
         />
 
         {/* Quick Response Buttons */}
         <div>
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-            Quick Situation & Response Branches
+            Quick Responses &amp; Branches
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {stageDef.quickResponses.map((qr, idx) => (
@@ -269,7 +278,7 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
                   if (qr.autoFill) onUpdateCustomer(qr.autoFill);
                   if (qr.nextStage) onTransition(qr.nextStage);
                   if (qr.guidance) {
-                    alert(`Guidance:\n\n${qr.guidance}`);
+                    alert(`Approved Response:\n\n${qr.guidance}`);
                   }
                 }}
                 className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-left transition-all hover:border-sparta-500/50"
@@ -283,80 +292,113 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
       </div>
 
       {/* 5. STAGE-SPECIFIC INTERACTIVE TOOLS & DATA FIELDS */}
-      {/* Stage 4: DOB Calculator Card */}
-      {currentStage === "STAGE_4_DOB_VALIDATION" && (
-        <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 space-y-3">
+
+      {/* Stage 2: Consumer Identification Number Input */}
+      {currentStage === "STAGE_2_VERIFICATION_ID" && (
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                Stage 4 DOB & Age Calculator Tool
-              </h3>
-            </div>
-            <button
-              onClick={onOpenDobCalculator}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 shadow-sm"
-            >
-              <Calculator className="w-3.5 h-3.5" />
-              <span>Open DOB Tool</span>
-            </button>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-sparta-400" />
+              <span>Consumer Identification Number Check (Section 7)</span>
+            </h3>
+            <span className="text-[10px] text-slate-400">Found on customer's bill or service info</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label className="text-slate-400 block mb-1">Enter Date of Birth (YYYY-MM-DD):</label>
+              <label className="text-slate-400 block mb-1">Consumer Identification Number:</label>
               <input
-                type="date"
-                value={customer.dob || ""}
-                onChange={(e) => {
-                  const res = CalculatorTools.calculateAgeFromDob(e.target.value);
-                  const isEligible = CalculatorTools.evaluateDobEligibility({ birthYear: res.birthYear }, config).isEligible;
+                type="text"
+                value={customer.consumerId || customer.customerId || ""}
+                onChange={(e) =>
                   onUpdateCustomer({
-                    dob: e.target.value,
-                    birthYear: res.birthYear,
-                    calculatedAge: res.age,
-                    isEligibleAge: isEligible,
-                  });
-                }}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono"
+                    consumerId: e.target.value.toUpperCase(),
+                    customerId: e.target.value.toUpperCase(),
+                    consumerIdStatus: "VERIFIED",
+                    customerIdStatus: "VERIFIED",
+                  })
+                }
+                placeholder="e.g. CIN-89371284"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono uppercase"
               />
             </div>
-
-            <div>
-              <label className="text-slate-400 block mb-1">Quick Age Conversion:</label>
-              <div className="flex gap-1.5 flex-wrap">
-                {[68, 70, 72, 75, 78, 80].map((age) => (
-                  <button
-                    key={age}
-                    onClick={() => {
-                      const year = CalculatorTools.calculateYearFromAge(age);
-                      const isEligible = CalculatorTools.evaluateDobEligibility({ birthYear: year }, config).isEligible;
-                      onUpdateCustomer({
-                        birthYear: year,
-                        calculatedAge: age,
-                        dob: `${year}-01-01`,
-                        isEligibleAge: isEligible,
-                      });
-                    }}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px]"
-                  >
-                    {age} yrs (Born {2026 - age})
-                  </button>
-                ))}
-              </div>
+            <div className="flex items-end gap-2">
+              <button
+                onClick={() =>
+                  onUpdateCustomer({
+                    consumerIdStatus: "NOT_AVAILABLE",
+                    consumerIdUnavailable: true,
+                  })
+                }
+                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+              >
+                ID Not Found on Bill
+              </button>
+              <button
+                onClick={() =>
+                  onUpdateCustomer({
+                    consumerIdStatus: "REFUSED",
+                    consumerIdRefused: true,
+                  })
+                }
+                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+              >
+                Uncomfortable Sharing
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Stage 2 & 3: Bill Savings Calculator Widget */}
-      {(currentStage === "STAGE_2_CURRENT_SERVICE" || currentStage === "STAGE_3_OFFER_INTRO") && (
+      {/* Stage 4: Current Service — Using at Home */}
+      {currentStage === "STAGE_4_CURRENT_SERVICE" && (
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+            Current Service Screening (Section 9)
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onUpdateCustomer({ isUsingAtHome: "YES" })}
+              className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                customer.isUsingAtHome === "YES"
+                  ? "bg-emerald-600/30 border-emerald-500 text-emerald-300"
+                  : "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700"
+              }`}
+            >
+              ✓ YES — At Home
+            </button>
+            <button
+              onClick={() => onUpdateCustomer({ isUsingAtHome: "NO" })}
+              className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                customer.isUsingAtHome === "NO"
+                  ? "bg-amber-600/30 border-amber-500 text-amber-300"
+                  : "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700"
+              }`}
+            >
+              ✕ NO — Not Home
+            </button>
+            <button
+              onClick={() => onUpdateCustomer({ isUsingAtHome: "DONT_KNOW" })}
+              className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                customer.isUsingAtHome === "DONT_KNOW"
+                  ? "bg-indigo-600/30 border-indigo-500 text-indigo-300"
+                  : "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700"
+              }`}
+            >
+              ? Don't Know / Unsure
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Stage 5 & 6: Bill Reduction & 30% Savings Calculator Widget */}
+      {(currentStage === "STAGE_5_CURRENT_BILL" || currentStage === "STAGE_6_EXPLAINING_REDUCTION") && (
         <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Percent className="w-4 h-4 text-emerald-400" />
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                Bill Reduction & 30% Savings Calculator
+                30% Bill Reduction &amp; Savings Calculator
               </h3>
             </div>
             <button
@@ -364,13 +406,13 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 shadow-sm"
             >
               <Calculator className="w-3.5 h-3.5" />
-              <span>Open Bill Tool</span>
+              <span>Open Calculator Tool</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
             <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">Original Bill</span>
+              <span className="text-[10px] text-slate-400 block">Current Bill</span>
               <span className="text-sm font-bold text-white font-mono">
                 {customer.monthlyBill ? `£${customer.monthlyBill.toFixed(2)}` : "£0.00"}
               </span>
@@ -397,101 +439,50 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
         </div>
       )}
 
-      {/* Stage 6: Direct Debit / Customer ID verification */}
-      {currentStage === "STAGE_6_DIRECT_DEBIT_ID" && (
+      {/* Stage 9: Customer Decision Panel */}
+      {currentStage === "STAGE_9_CUSTOMER_DECISION" && (
         <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Stage 6 Customer ID Match & Format Rules
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+            Final Decision Recording (Sections 48 &amp; 49)
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="text-slate-400 block mb-1">Customer Identifier (Prefix: IBANGB):</label>
-              <input
-                type="text"
-                value={customer.customerId || ""}
-                onChange={(e) =>
-                  onUpdateCustomer({
-                    customerId: e.target.value.toUpperCase(),
-                    customerIdStatus: "VERIFIED",
-                  })
-                }
-                placeholder="e.g. IBANGB89371284"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono uppercase"
-              />
-            </div>
-            <div className="flex items-end gap-2">
-              <button
-                onClick={() =>
-                  onUpdateCustomer({
-                    customerIdStatus: "NOT_AVAILABLE",
-                    customerIdUnavailable: true,
-                  })
-                }
-                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-              >
-                ID Not Available
-              </button>
-              <button
-                onClick={() =>
-                  onUpdateCustomer({
-                    customerIdStatus: "REFUSED",
-                    customerIdRefused: true,
-                  })
-                }
-                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-              >
-                Uncomfortable Sharing
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Stage 9: Medical Alarm & TV Equipment */}
-      {currentStage === "STAGE_9_FINAL_QUESTIONS" && (
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Stage 9 Equipment & Medical Alarm Screening
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="text-slate-400 block mb-1">Medical Alarm Connected?</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onUpdateCustomer({ medicalAlarm: true })}
-                  className={`flex-1 py-2 rounded-lg border font-bold ${
-                    customer.medicalAlarm === true
-                      ? "bg-rose-600/30 border-rose-500 text-rose-300"
-                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  ⚠️ Yes (Alarm Present)
-                </button>
-                <button
-                  onClick={() => onUpdateCustomer({ medicalAlarm: false })}
-                  className={`flex-1 py-2 rounded-lg border font-bold ${
-                    customer.medicalAlarm === false
-                      ? "bg-emerald-600/30 border-emerald-500 text-emerald-300"
-                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  ✓ No (Standard Line)
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-slate-400 block mb-1">TV Make & Model:</label>
-              <input
-                type="text"
-                value={customer.tvMakeModel || ""}
-                onChange={(e) =>
-                  onUpdateCustomer({ tvMakeModel: e.target.value, hasTvService: true })
-                }
-                placeholder="e.g. Samsung 43-inch Smart TV"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-              />
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <button
+              onClick={() => {
+                onUpdateCustomer({ customerDecision: "YES" });
+                onEndCall("LEAD_COMPLETED");
+              }}
+              className="p-3 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/40 border border-emerald-500 text-emerald-300 font-bold flex flex-col items-center gap-1"
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              <span>YES — Proceed</span>
+            </button>
+            <button
+              onClick={() => {
+                onUpdateCustomer({ customerDecision: "NO" });
+                onEndCall("CUSTOMER_NOT_INTERESTED");
+              }}
+              className="p-3 rounded-xl bg-rose-600/30 hover:bg-rose-600/40 border border-rose-500 text-rose-300 font-bold flex flex-col items-center gap-1"
+            >
+              <XCircle className="w-5 h-5" />
+              <span>NO — Respect Choice</span>
+            </button>
+            <button
+              onClick={() => {
+                onUpdateCustomer({ customerDecision: "THINK_ABOUT_IT" });
+                onEndCall("CALL_BACK_REQUESTED");
+              }}
+              className="p-3 rounded-xl bg-amber-600/30 hover:bg-amber-600/40 border border-amber-500 text-amber-300 font-bold flex flex-col items-center gap-1"
+            >
+              <RotateCcw className="w-5 h-5" />
+              <span>Think About It / Callback</span>
+            </button>
+            <button
+              onClick={() => onEndCall("DO_NOT_CALL")}
+              className="p-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-400 font-bold flex flex-col items-center gap-1"
+            >
+              <AlertOctagon className="w-5 h-5 text-rose-400" />
+              <span>Remove Number</span>
+            </button>
           </div>
         </div>
       )}
@@ -508,13 +499,13 @@ export const ScriptPanel: React.FC<ScriptPanelProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
-          {currentStage === "STAGE_11_NATURAL_CLOSE" ? (
+          {currentStage === "STAGE_9_CUSTOMER_DECISION" ? (
             <button
               onClick={() => onEndCall("LEAD_COMPLETED")}
               className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs md:text-sm font-bold flex items-center gap-2 shadow-glow-primary transition-all active:scale-95"
             >
               <Check className="w-4 h-4" />
-              <span>Complete Lead & Disposition</span>
+              <span>Complete Lead &amp; Disposition</span>
             </button>
           ) : (
             <button

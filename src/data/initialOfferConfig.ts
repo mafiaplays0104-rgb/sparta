@@ -1,39 +1,29 @@
 import { OfferConfig } from "../types";
 
 export const initialOfferConfig: OfferConfig = {
-  campaignName: "SPARTA UK Landline Direct Debit Optimization 2026",
+  campaignName: "UK Telecom — 30% Bill Reduction Campaign",
   enabled: true,
-  offerName: "Sparta 500 Anytime Minutes Plan",
-  minutes: 500,
-  crossNetwork: true,
-  anytime: true,
-  dedicatedCustomerService: true,
-  technicalVisit: true,
-  writtenTerms: true,
+  offerName: "Up to 30% Monthly Bill Reduction",
+  advisorName: "Peter",
+  companyName: "[COMPANY NAME]",
+  approvedAgentId: "[APPROVED ID]",
   maxDiscountPercent: 30,
   serviceUnchanged: true,
   contractUnchanged: true,
   equipmentUnchanged: true,
   paymentMethod: "DIRECT_DEBIT",
-  customerIdPrefix: "IBANGB",
-  eligibilityRules: {
-    minimumDob: "1943-01-01",
-    maximumDob: "1960-12-31",
-    minAge: 65,
-    maxAge: 83,
-  },
   authorisedText: {
-    companyName: "Sparta Phone Services",
+    companyName: "[COMPANY NAME]",
     campaignReason:
-      "We are checking whether qualifying telephone customers can access the 500-minute capped rate and lower Direct Debit billing.",
+      "There's been a reduction of up to 30% on your monthly bill, and we are checking whether your current telephone service qualifies for it.",
     dataSourceExplanation:
-      "Your details were provided under authorized UK business directories for telecom review. We do not share your information with third-party advertisers.",
+      "We contact registered telephone line users regarding authorized tariff reductions and bill savings.",
     verificationProcedure:
-      "You can independently verify Sparta through our official customer services portal or by checking our registered corporate identity.",
+      "You can independently verify [COMPANY NAME] and our service before providing any details. Our agent reference is [APPROVED ID].",
     privacyNotice:
-      "All information collected is processed under UK GDPR standards strictly for eligibility assessment and contract fulfillment.",
+      "All information is checked strictly to verify the correct account and service eligibility. We never ask for unauthorized financial credentials.",
     closingLines:
-      "That's everything I needed from you today. I'll pass your details across to the relevant team. They'll be able to go through the available options with you and explain the service, pricing and terms. And you'll have the relevant information to look over before making any changes. Thank you very much for your time. Have a good day.",
+      "Thank you for going through those details with me. I'll now explain the available reduction and any important terms before you decide whether you want to continue.",
   },
   scriptLock: true,
   scriptVersion: "1.0.0",

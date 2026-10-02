@@ -15,6 +15,7 @@ import { CallProgress } from "./components/CallProgress";
 import { CustomerPanel } from "./components/CustomerPanel";
 import { ScriptRunner } from "./components/ScriptRunner";
 import { AssistantPanel } from "./components/AssistantPanel";
+import { ObjectionModal } from "./components/ObjectionModal";
 import { DobCalculatorModal } from "./components/tools/DobCalculatorModal";
 import { BillCalculatorModal } from "./components/tools/BillCalculatorModal";
 import { CallbackModal } from "./components/CallbackModal";
@@ -37,21 +38,14 @@ export const App: React.FC = () => {
     address: "14 Highfield Road",
     postcode: "B33 8TH",
     contactNumber: "0121 496 0123",
-    monthlyBill: 80.99,
+    consumerId: "CIN-89371284",
+    consumerIdStatus: "VERIFIED",
+    isUsingAtHome: "YES",
+    monthlyBill: 65.00,
     billApproximate: true,
-    billIncludesPhone: true,
-    billIncludesBroadband: true,
-    billIncludesTv: false,
-    landlineUsage: "LOW",
-    medicalAlarm: false,
-    hasMobile: true,
-    mobileNumber: "07700 900123",
-    mobileType: "CONTRACT",
-    mobileNetwork: "EE",
-    customerIdPrefix: "IBANGB",
-  } as any);
+  });
 
-  // Current Unit Index across the whole sequential call
+  // Current Unit Index across the sequential call
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
   const [completedStages, setCompletedStages] = useState<Set<MasterStage>>(new Set());
   const [overrideSayText, setOverrideSayText] = useState<string | undefined>();
@@ -60,6 +54,7 @@ export const App: React.FC = () => {
   const [isDobCalcOpen, setIsDobCalcOpen] = useState(false);
   const [isBillCalcOpen, setIsBillCalcOpen] = useState(false);
   const [isObjectionsOpen, setIsObjectionsOpen] = useState(false);
+  const [isObjectionModalOpen, setIsObjectionModalOpen] = useState(false);
   const [isCallbackOpen, setIsCallbackOpen] = useState(false);
   const [isEscalationOpen, setIsEscalationOpen] = useState(false);
   const [isCallSummaryOpen, setIsCallSummaryOpen] = useState(false);
@@ -68,7 +63,7 @@ export const App: React.FC = () => {
 
   const [disposition, setDisposition] = useState<CallDisposition>("LEAD_COMPLETED");
   const [callbackDetails, setCallbackDetails] = useState<CallbackDetails | undefined>();
-  const [auditLogs, setAuditLogs] = useState<CallAuditLog[]>([]);
+  const [auditLogs, _setAuditLogs] = useState<CallAuditLog[]>([]);
 
   // Compute all structured units
   const allUnits = useMemo(() => {
@@ -129,6 +124,9 @@ export const App: React.FC = () => {
       doorNumber: "",
       postcode: "",
       monthlyBill: undefined,
+      isUsingAtHome: "UNCONFIRMED",
+      consumerId: "",
+      consumerIdStatus: "PENDING",
     });
     setIsCallSummaryOpen(false);
   };
@@ -137,7 +135,7 @@ export const App: React.FC = () => {
     if (reason === "DO_NOT_CALL") setDisposition("DO_NOT_CALL");
     else if (reason === "WRONG_PERSON") setDisposition("WRONG_PERSON");
     else if (reason?.includes("busy")) setDisposition("CUSTOMER_BUSY");
-    else if (reason?.includes("not interested")) setDisposition("CUSTOMER_NOT_INTERESTED");
+    else if (reason?.includes("not interested") || reason === "CUSTOMER_NOT_INTERESTED") setDisposition("CUSTOMER_NOT_INTERESTED");
     else setDisposition("LEAD_COMPLETED");
 
     setIsCallSummaryOpen(true);
@@ -154,10 +152,9 @@ export const App: React.FC = () => {
     setIsCallSummaryOpen(true);
   };
 
-  // Keyboard Navigation (ArrowRight/Enter -> Next, ArrowLeft -> Prev, O -> Objections, D -> DOB, S -> Savings, C -> Callback, Esc -> Close)
+  // Keyboard Navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in an input
       if (
         document.activeElement?.tagName === "INPUT" ||
         document.activeElement?.tagName === "TEXTAREA"
@@ -176,7 +173,7 @@ export const App: React.FC = () => {
         handlePreviousUnit();
       } else if (e.key === "o" || e.key === "O") {
         e.preventDefault();
-        setIsObjectionsOpen((prev) => !prev);
+        setIsObjectionModalOpen((prev) => !prev);
       } else if (e.key === "d" || e.key === "D") {
         e.preventDefault();
         setIsDobCalcOpen((prev) => !prev);
@@ -188,6 +185,7 @@ export const App: React.FC = () => {
         setIsCallbackOpen((prev) => !prev);
       } else if (e.key === "Escape") {
         setIsObjectionsOpen(false);
+        setIsObjectionModalOpen(false);
         setIsDobCalcOpen(false);
         setIsBillCalcOpen(false);
         setIsCallbackOpen(false);
@@ -204,21 +202,21 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-slate-100 font-sans selection:bg-sparta-500 selection:text-slate-950 overflow-hidden">
-      {/* 1. TOP HEADER (COMPACT & CLEAN) */}
+      {/* 1. TOP HEADER */}
       <Header
         config={config}
         currentStage={currentStage}
         onResetCall={handleResetCall}
         onOpenAdmin={() => setIsAdminOpen(true)}
-        onOpenObjections={() => setIsObjectionsOpen(true)}
+        onOpenObjections={() => setIsObjectionModalOpen(true)}
         onOpenDobCalculator={() => setIsDobCalcOpen(true)}
         onOpenBillCalculator={() => setIsBillCalcOpen(true)}
         onOpenTestRunner={() => setIsTestRunnerOpen(true)}
       />
 
-      {/* 2. MAIN 3-COLUMN WORKSPACE (DOMINANT CENTRAL SCRIPT) */}
+      {/* 2. MAIN 3-COLUMN WORKSPACE */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT COLUMN: CALL WORKFLOW (SIMPLIFIED) */}
+        {/* LEFT COLUMN: CALL WORKFLOW */}
         <div className="hidden lg:block w-52 xl:w-56 flex-shrink-0">
           <CallProgress
             currentStage={currentStage}
@@ -227,7 +225,7 @@ export const App: React.FC = () => {
           />
         </div>
 
-        {/* CENTER COLUMN: SINGLE SCRIPT UNIT RUNNER (VISUAL DOMINANCE) */}
+        {/* CENTER COLUMN: SCRIPT RUNNER */}
         <ScriptRunner
           unit={currentUnit}
           unitIndexOverall={currentUnitIndex}
@@ -241,13 +239,13 @@ export const App: React.FC = () => {
           canGoPrevious={currentUnitIndex > 0}
           onOpenDobCalculator={() => setIsDobCalcOpen(true)}
           onOpenBillCalculator={() => setIsBillCalcOpen(true)}
-          onOpenObjections={() => setIsObjectionsOpen(true)}
+          onOpenObjections={() => setIsObjectionModalOpen(true)}
           onEndCall={handleEndCall}
           overrideSayText={overrideSayText}
           onClearOverrideSayText={() => setOverrideSayText(undefined)}
         />
 
-        {/* RIGHT COLUMN: COMPACT CUSTOMER INFORMATION */}
+        {/* RIGHT COLUMN: CUSTOMER PANEL */}
         <div className="hidden md:block w-64 xl:w-72 flex-shrink-0">
           <CustomerPanel
             customer={customer}
@@ -258,17 +256,17 @@ export const App: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. MINIMAL CALL STATUS BAR */}
+      {/* 3. CALL STATUS BAR */}
       <div className="bg-slate-900/90 border-t border-slate-800/80 px-4 py-1.5 flex items-center justify-between text-[11px] text-slate-400 select-none">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          <span>Live Call Active</span>
+          <span>Live Call Active — Advisor: {config.advisorName || "Peter"}</span>
           <span className="text-slate-600">•</span>
           <span className="font-mono text-slate-300">Unit {currentUnitIndex + 1} of {allUnits.length}</span>
         </div>
 
         <div className="hidden sm:flex items-center gap-3 text-slate-500 font-mono text-[10px]">
-          <span>Shortcuts: Enter=Next • Left=Back • O=Objections • D=DOB • S=Savings • C=Callback</span>
+          <span>Shortcuts: Enter=Next • Left=Back • O=52 Script Sections • S=30% Savings • C=Callback</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -289,14 +287,21 @@ export const App: React.FC = () => {
       </div>
 
       {/* 4. MODALS & DRAWERS */}
-      {/* Objections Collapsible Drawer */}
+      {/* 52 Script Sections Modal */}
+      <ObjectionModal
+        isOpen={isObjectionModalOpen}
+        onClose={() => setIsObjectionModalOpen(false)}
+        onSelectResponse={(text) => setOverrideSayText(text)}
+      />
+
+      {/* Objections Quick Drawer */}
       <AssistantPanel
         isOpen={isObjectionsOpen}
         onClose={() => setIsObjectionsOpen(false)}
         onApplyObjectionResponse={(text) => setOverrideSayText(text)}
       />
 
-      {/* DOB & Age Calculator Modal */}
+      {/* DOB Calculator Modal */}
       <DobCalculatorModal
         isOpen={isDobCalcOpen}
         onClose={() => setIsDobCalcOpen(false)}
@@ -305,7 +310,7 @@ export const App: React.FC = () => {
         onApplyDob={(dobData) => handleUpdateCustomer(dobData)}
       />
 
-      {/* Bill Reduction & 30% Savings Calculator Modal */}
+      {/* 30% Savings Calculator Modal */}
       <BillCalculatorModal
         isOpen={isBillCalcOpen}
         onClose={() => setIsBillCalcOpen(false)}
@@ -330,7 +335,7 @@ export const App: React.FC = () => {
         onConfirmEscalate={handleConfirmEscalate}
       />
 
-      {/* Call Summary / Disposition Modal */}
+      {/* Call Summary Modal */}
       <CallSummaryModal
         isOpen={isCallSummaryOpen}
         onClose={() => setIsCallSummaryOpen(false)}

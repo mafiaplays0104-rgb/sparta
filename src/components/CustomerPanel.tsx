@@ -1,8 +1,6 @@
 import React from "react";
 import {
-  CheckCircle2,
-  Circle,
-  Calendar,
+  ShieldCheck,
   Percent,
 } from "lucide-react";
 import { CustomerRecord, OfferConfig } from "../types";
@@ -16,34 +14,42 @@ interface CustomerPanelProps {
 
 export const CustomerPanel: React.FC<CustomerPanelProps> = ({
   customer,
-  config,
+  config: _config,
   onOpenDobCalculator,
   onOpenBillCalculator,
 }) => {
-  // Compact Checklist
+  // Compact Checklist matching 30% reduction live flow
   const checklist = [
-    { label: "Customer Name", checked: !!(customer.firstName || customer.lastName) },
-    { label: "Address", checked: !!customer.doorNumber },
-    { label: "Postcode", checked: !!customer.postcode },
-    { label: "Customer ID", checked: !!(customer.customerId || customer.customerIdStatus) },
-    { label: "Mobile", checked: !!(customer.mobileNumber || customer.hasMobile !== undefined) },
-    { label: "Medical Alarm", checked: customer.medicalAlarm !== undefined },
-    { label: "TV Details", checked: !!(customer.tvMakeModel || customer.hasTvService !== undefined) },
+    { label: "Consumer ID Check (Sec 7)", checked: !!(customer.consumerId || customer.customerId || customer.consumerIdStatus === "VERIFIED") },
+    { label: "Home Service (Sec 9)", checked: customer.isUsingAtHome !== undefined && customer.isUsingAtHome !== "UNCONFIRMED" },
+    { label: "Monthly Bill (Sec 10)", checked: customer.monthlyBill !== undefined },
+    { label: "Reduction Explained (Sec 11)", checked: customer.finalConfirmationGiven || customer.monthlyBill !== undefined },
+    { label: "Terms Understood (Sec 46)", checked: !!customer.termsUnderstood },
+    { label: "Customer Decision (Sec 48/49)", checked: !!customer.customerDecision },
   ];
 
   const checkedCount = checklist.filter((c) => c.checked).length;
 
   return (
     <aside className="bg-slate-900/60 backdrop-blur-md border-l border-slate-800/80 p-3.5 flex flex-col h-full overflow-y-auto space-y-3.5 select-none text-xs">
-      {/* 1. CUSTOMER IDENTITY */}
+      {/* 1. CUSTOMER IDENTITY & ACCOUNT */}
       <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-          Customer
-        </span>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Customer &amp; Account
+          </span>
+          {customer.consumerIdStatus === "VERIFIED" && (
+            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-0.5">
+              <ShieldCheck className="w-2.5 h-2.5" />
+              <span>VERIFIED</span>
+            </span>
+          )}
+        </div>
+
         <div className="font-bold text-white text-sm">
           {customer.firstName || customer.lastName
             ? `${customer.title || "Mr/Mrs"} ${customer.firstName || ""} ${customer.lastName || ""}`
-            : "—"}
+            : "Customer"}
         </div>
         <div className="text-slate-300 font-mono text-xs">
           {customer.doorNumber ? `${customer.doorNumber}, ` : ""}
@@ -52,6 +58,14 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
         <div className="text-slate-400 font-mono text-xs">
           {customer.contactNumber || "—"}
         </div>
+
+        {(customer.consumerId || customer.customerId) && (
+          <div className="text-[11px] text-sparta-300 pt-1 border-t border-slate-900 flex items-center justify-between">
+            <span className="font-mono">ID: {customer.consumerId || customer.customerId}</span>
+            <span className="text-[10px] text-emerald-400 font-bold">✓ Checked</span>
+          </div>
+        )}
+
         {(customer.dob || customer.birthYear) && (
           <div className="text-[11px] text-indigo-300 pt-1 border-t border-slate-900 flex items-center justify-between">
             <span>DOB: {customer.dob || `Born ${customer.birthYear}`}</span>
@@ -65,11 +79,11 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
         )}
       </div>
 
-      {/* 2. CURRENT SERVICE */}
+      {/* 2. CURRENT SERVICE & 30% SAVINGS */}
       <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Current Service
+            Telephone Service
           </span>
           <button
             onClick={onOpenBillCalculator}
@@ -88,65 +102,43 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
           </span>
         </div>
 
+        {customer.monthlyBill !== undefined && (
+          <div className="flex justify-between items-center py-0.5">
+            <span className="text-slate-400">30% Discount:</span>
+            <span className="font-bold text-sparta-300 font-mono text-xs">
+              £{(customer.monthlyBill * 0.7).toFixed(2)}/mo
+            </span>
+          </div>
+        )}
+
         <div className="flex justify-between py-0.5">
-          <span className="text-slate-400">Landline:</span>
-          <span className="text-slate-200">
-            {customer.landlineUsage ? customer.landlineUsage.replace(/_/g, " ") : "—"}
+          <span className="text-slate-400">Home Service:</span>
+          <span className="text-slate-200 font-medium">
+            {customer.isUsingAtHome === "YES"
+              ? "✓ At Home"
+              : customer.isUsingAtHome === "NO"
+              ? "✕ Not Home"
+              : customer.isUsingAtHome === "DONT_KNOW"
+              ? "? Unsure"
+              : "—"}
           </span>
         </div>
 
-        <div className="flex justify-between py-0.5">
-          <span className="text-slate-400">Broadband:</span>
-          <span className="text-slate-200">
-            {customer.billIncludesBroadband === true ? "Yes" : customer.billIncludesBroadband === false ? "No" : "—"}
-          </span>
-        </div>
-
-        <div className="flex justify-between py-0.5">
-          <span className="text-slate-400">TV:</span>
-          <span className="text-slate-200 truncate max-w-[120px]">
-            {customer.tvMakeModel || (customer.hasTvService === true ? "Yes" : "—")}
-          </span>
-        </div>
+        {customer.customerDecision && (
+          <div className="flex justify-between py-0.5 items-center pt-1 border-t border-slate-900">
+            <span className="text-slate-400">Decision:</span>
+            <span className={customer.customerDecision === "YES" ? "text-emerald-400 font-bold" : "text-rose-400 font-medium"}>
+              {customer.customerDecision === "YES" ? "✓ Proceed (30%)" : "✕ Declined"}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* 3. CONTACT & SAFETY */}
-      {(customer.mobileNumber || customer.hasMobile || customer.medicalAlarm !== undefined) && (
-        <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-            Contact &amp; Safety
-          </span>
-
-          {customer.mobileNumber && (
-            <div className="flex justify-between py-0.5">
-              <span className="text-slate-400">Mobile:</span>
-              <span className="text-slate-200 font-mono">{customer.mobileNumber}</span>
-            </div>
-          )}
-
-          {customer.mobileNetwork && (
-            <div className="flex justify-between py-0.5">
-              <span className="text-slate-400">Network:</span>
-              <span className="text-slate-200">{customer.mobileNetwork}</span>
-            </div>
-          )}
-
-          {customer.medicalAlarm !== undefined && (
-            <div className="flex justify-between py-0.5 items-center">
-              <span className="text-slate-400">Medical Alarm:</span>
-              <span className={customer.medicalAlarm ? "text-rose-400 font-bold" : "text-emerald-400 font-medium"}>
-                {customer.medicalAlarm ? "⚠️ Present" : "No Alarm"}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 4. COMPACT COLLECTION CHECKLIST */}
+      {/* 3. LIVE CALL CHECKLIST */}
       <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Collection
+            Call Milestones
           </span>
           <span className="text-[10px] font-mono text-sparta-400 font-bold">
             {checkedCount} / {checklist.length}

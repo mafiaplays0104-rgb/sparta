@@ -36,7 +36,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
 }) => {
   const currentIndex = STAGES_LIST.indexOf(currentStage);
   const canGoBack = currentIndex > 0;
-  const isFinalStage = currentStage === "STAGE_11_NATURAL_CLOSE";
+  const isFinalStage = currentIndex === STAGES_LIST.length - 1;
 
   // Global Keyboard Shortcuts (1-9)
   useEffect(() => {

@@ -127,15 +127,15 @@ export class SecurityEngine {
   }
 
   /**
-   * Customer ID / Direct Debit Match Identifier validator
-   * Supports configured prefix such as 'IBANGB'
+   * Consumer Identification Number validator
+   * Supports alphanumeric identifiers such as CIN-XXXXXXXX or account references
    */
   public static validateCustomerId(
     idString: string,
-    requiredPrefix: string = "IBANGB"
+    requiredPrefix: string = ""
   ): ValidationResult {
     if (!idString || !idString.trim()) {
-      return { isValid: false, errorMessage: "Customer ID is required." };
+      return { isValid: false, errorMessage: "Consumer Identification Number is required." };
     }
 
     const clean = idString.trim().toUpperCase().replace(/\s+/g, "");
@@ -148,8 +148,8 @@ export class SecurityEngine {
       };
     }
 
-    // Typical length check for IBANGB or identifier (e.g. 10 to 34 alphanumeric characters)
-    if (clean.length < 8 || clean.length > 34 || !/^[A-Z0-9]+$/.test(clean)) {
+    // Length check for Consumer Identification Number (e.g. 5 to 34 alphanumeric characters)
+    if (clean.length < 4 || clean.length > 34 || !/^[A-Z0-9\-_]+$/.test(clean)) {
       return {
         isValid: false,
         normalizedValue: clean,

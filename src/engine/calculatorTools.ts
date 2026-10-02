@@ -147,8 +147,10 @@ export class CalculatorTools {
     calculation: { birthYear?: number; age?: number; exactDob?: string },
     config: OfferConfig
   ): { isEligible: boolean; message: string } {
-    const minYear = new Date(config.eligibilityRules.minimumDob).getFullYear();
-    const maxYear = new Date(config.eligibilityRules.maximumDob).getFullYear();
+    const minDobStr = config.eligibilityRules?.minimumDob || "1943-01-01";
+    const maxDobStr = config.eligibilityRules?.maximumDob || "1960-12-31";
+    const minYear = new Date(minDobStr).getFullYear();
+    const maxYear = new Date(maxDobStr).getFullYear();
 
     let targetYear = calculation.birthYear;
 

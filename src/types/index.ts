@@ -1,15 +1,13 @@
 export type MasterStage =
   | "STAGE_1_OPENING"
-  | "STAGE_2_CURRENT_SERVICE"
-  | "STAGE_3_OFFER_INTRO"
-  | "STAGE_4_DOB_VALIDATION"
-  | "STAGE_5_CONFIRM_ADDRESS"
-  | "STAGE_6_DIRECT_DEBIT_ID"
-  | "STAGE_7_PERSONAL_DETAILS"
-  | "STAGE_8_MOBILE_DETAILS"
-  | "STAGE_9_FINAL_QUESTIONS"
-  | "STAGE_10_FINAL_CHECK"
-  | "STAGE_11_NATURAL_CLOSE"
+  | "STAGE_2_VERIFICATION_ID"
+  | "STAGE_3_VERIFICATION_COMPLETED"
+  | "STAGE_4_CURRENT_SERVICE"
+  | "STAGE_5_CURRENT_BILL"
+  | "STAGE_6_EXPLAINING_REDUCTION"
+  | "STAGE_7_FINAL_CONFIRMATION"
+  | "STAGE_8_BEFORE_AGREEMENT"
+  | "STAGE_9_CUSTOMER_DECISION"
   | "CALL_COMPLETED"
   | "CALL_DISPOSITIONED";
 
@@ -37,10 +35,10 @@ export type ResponseCategory =
   | "WRONG_PERSON"
   | "DO_NOT_CALL";
 
-export type LandlineUsage = "LOW" | "MODERATE" | "HIGH" | "INCOMING_ONLY" | "UNSURE";
-export type BillSatisfaction = "HAPPY" | "PAYING_ABOUT_RIGHT" | "PAYING_TOO_MUCH" | "UNSURE";
-export type MobileType = "PAYG" | "CONTRACT" | "UNKNOWN";
+export type HomeServiceStatus = "YES" | "NO" | "DONT_KNOW" | "UNCONFIRMED";
 export type CustomerIdStatus = "PENDING" | "VERIFIED" | "NOT_AVAILABLE" | "REFUSED" | "INVALID";
+export type LandlineUsage = "LOW" | "MODERATE" | "HIGH" | "INCOMING_ONLY" | "UNSURE";
+export type MobileType = "PAYG" | "CONTRACT" | "UNKNOWN";
 
 export interface CustomerRecord {
   // Identity & Contact
@@ -53,42 +51,46 @@ export interface CustomerRecord {
   postcode?: string;
   contactNumber?: string;
   
-  // DOB & Age
+  // Consumer Identification Number (Section 7)
+  consumerId?: string;
+  customerId?: string; // alias/backward compat
+  consumerIdStatus?: CustomerIdStatus;
+  customerIdStatus?: CustomerIdStatus;
+  consumerIdRefused?: boolean;
+  consumerIdUnavailable?: boolean;
+
+  // Current Service (Section 9)
+  isUsingAtHome?: HomeServiceStatus;
+  
+  // Current Monthly Bill (Section 10)
+  monthlyBill?: number;
+  billApproximate?: boolean;
+  billSatisfaction?: string;
+
+  // Decision & Agreement (Sections 45-49)
+  termsUnderstood?: boolean;
+  finalConfirmationGiven?: boolean;
+  customerDecision?: "YES" | "NO" | "THINK_ABOUT_IT" | "CALL_BACK" | "UNDECIDED";
+
+  // Optional DOB & Equipment fields if customer shares
   dob?: string;
   birthYear?: number;
   calculatedAge?: number;
   isEligibleAge?: boolean | null;
   dobRefused?: boolean;
-
-  // Identification / Direct Debit Match
-  customerId?: string;
-  customerIdStatus?: CustomerIdStatus;
-  customerIdRefused?: boolean;
-  customerIdUnavailable?: boolean;
-
-  // Mobile
   hasMobile?: boolean;
   mobileNumber?: string;
   mobileType?: MobileType;
   mobileNetwork?: string;
-
-  // Services
+  medicalAlarm?: boolean;
+  hasTvService?: boolean;
+  tvMakeModel?: string;
+  addressConfirmed?: boolean;
   landlineUsage?: LandlineUsage;
-  billSatisfaction?: BillSatisfaction;
-  monthlyBill?: number;
-  billApproximate?: boolean;
   billIncludesPhone?: boolean;
   billIncludesBroadband?: boolean;
   billIncludesTv?: boolean;
   issuesRecently?: string;
-
-  // Equipment & Safety
-  medicalAlarm?: boolean;
-  hasTvService?: boolean;
-  tvMakeModel?: string;
-
-  // Address confirmed flag
-  addressConfirmed?: boolean;
   personalDetailsConfirmed?: boolean;
 }
 
@@ -96,24 +98,14 @@ export interface OfferConfig {
   campaignName: string;
   enabled: boolean;
   offerName: string;
-  minutes: number;
-  crossNetwork: boolean;
-  anytime: boolean;
-  dedicatedCustomerService: boolean;
-  technicalVisit: boolean;
-  writtenTerms: boolean;
+  advisorName: string;
+  companyName: string;
+  approvedAgentId: string;
   maxDiscountPercent: number;
   serviceUnchanged: boolean;
   contractUnchanged: boolean;
   equipmentUnchanged: boolean;
   paymentMethod: "DIRECT_DEBIT";
-  customerIdPrefix: string; // e.g. "IBANGB"
-  eligibilityRules: {
-    minimumDob: string; // e.g. '1943-01-01'
-    maximumDob: string; // e.g. '1960-12-31'
-    minAge?: number;
-    maxAge?: number;
-  };
   authorisedText: {
     companyName: string;
     campaignReason: string;
@@ -125,10 +117,23 @@ export interface OfferConfig {
   scriptLock: boolean;
   scriptVersion: string;
   dataRetentionDays: number;
+  eligibilityRules?: {
+    minimumDob?: string;
+    maximumDob?: string;
+    minAge?: number;
+    maxAge?: number;
+  };
+  minutes?: number;
+  crossNetwork?: boolean;
+  anytime?: boolean;
+  dedicatedCustomerService?: boolean;
+  technicalVisit?: boolean;
+  writtenTerms?: boolean;
 }
 
 export interface ObjectionItem {
   id: string;
+  sectionNumber: number;
   category: string;
   name: string;
   triggers: string[];
@@ -136,7 +141,7 @@ export interface ObjectionItem {
   recommendedResponse: string;
   optionalFollowUp?: string;
   escalationCondition?: string;
-  stopCondition: string;
+  stopCondition?: string;
   scriptStage?: MasterStage | "ALL";
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   allowContinue: boolean;
@@ -146,11 +151,12 @@ export interface ObjectionItem {
 
 export interface CustomerQuestionItem {
   id: string;
+  sectionNumber?: number;
   questionKeywords: string[];
   customerAsk: string;
   approvedAnswer: string;
   notes?: string;
-  category: "ELIGIBILITY" | "IDENTITY" | "TECHNICAL" | "DATA_PRIVACY" | "BILLING" | "COMPANY";
+  category: "IDENTITY" | "OFFER" | "TECHNICAL" | "DATA_PRIVACY" | "BILLING" | "COMPANY" | "COMPLIANCE";
 }
 
 export type CallDisposition =

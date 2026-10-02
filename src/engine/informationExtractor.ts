@@ -1,9 +1,12 @@
-import { CustomerRecord, LandlineUsage, ResponseCategory } from "../types";
+import { CustomerRecord, LandlineUsage, ResponseCategory, HomeServiceStatus } from "../types";
 import { CalculatorTools } from "./calculatorTools";
 
 export interface ExtractedInfo {
   monthlyBill?: number;
   billApproximate?: boolean;
+  isUsingAtHome?: HomeServiceStatus;
+  consumerId?: string;
+  customerDecision?: "YES" | "NO" | "THINK_ABOUT_IT" | "CALL_BACK" | "UNDECIDED";
   landlineUsage?: LandlineUsage;
   billIncludesPhone?: boolean;
   billIncludesBroadband?: boolean;
@@ -39,8 +42,28 @@ export class InformationExtractor {
     // 1. Response Category Detection
     result.responseCategory = this.classifyResponseCategory(lower);
 
-    // 2. Monthly Bill Extraction
-    const billMatch = lower.match(/(?:pay|bill|paying|cost|costs|about|around|roughly)\s*(?:is|of)?\s*(?:around|about|roughly)?\s*(?:£)?\s*(\d+(?:\.\d{1,2})?|\d+\s*(?:pounds?|quid))/);
+    // 2. Home Service Extraction (Section 9)
+    if (
+      lower.includes("yes at home") ||
+      lower.includes("yes it's at home") ||
+      lower.includes("yes, at home") ||
+      lower.includes("use it at home") ||
+      lower.includes("it's my home phone") ||
+      lower.includes("at my house")
+    ) {
+      result.isUsingAtHome = "YES";
+    } else if (
+      lower.includes("not at home") ||
+      lower.includes("business phone") ||
+      lower.includes("office phone") ||
+      lower.includes("for work only")
+    ) {
+      result.isUsingAtHome = "NO";
+    } else if (lower.includes("don't know") && lower.includes("home")) {
+      result.isUsingAtHome = "DONT_KNOW";
+    }
+
+    // 3. Monthly Bill Extraction (Section 10)
     const parsedAmount = CalculatorTools.parseBillAmount(text);
 
     if (parsedAmount !== null && parsedAmount > 0) {
@@ -70,7 +93,25 @@ export class InformationExtractor {
       result.billApproximate = isApprox;
     }
 
-    // 3. Landline Usage Extraction
+    // 4. Decision Extraction (Sections 48, 49)
+    if (
+      lower.includes("yes proceed") ||
+      lower.includes("yes please") ||
+      lower.includes("i want the reduction") ||
+      lower.includes("yes that's fine") ||
+      lower.includes("go ahead with it")
+    ) {
+      result.customerDecision = "YES";
+    } else if (
+      lower.includes("no i don't want it") ||
+      lower.includes("no thanks") ||
+      lower.includes("no reduction") ||
+      lower.includes("i'll pass")
+    ) {
+      result.customerDecision = "NO";
+    }
+
+    // 5. Landline Usage Extraction
     if (
       lower.includes("hardly ever") ||
       lower.includes("rarely") ||
@@ -99,69 +140,10 @@ export class InformationExtractor {
       result.landlineUsage = "MODERATE";
     }
 
-    // 4. Included Services (Broadband / TV / Phone)
-    if (
-      lower.includes("including broadband") ||
-      lower.includes("includes broadband") ||
-      lower.includes("with internet") ||
-      lower.includes("includes internet") ||
-      lower.includes("with wifi") ||
-      lower.includes("with broadband")
-    ) {
-      result.billIncludesBroadband = true;
-    }
-    if (
-      lower.includes("without broadband") ||
-      lower.includes("no internet") ||
-      lower.includes("don't have broadband") ||
-      lower.includes("landline only") ||
-      lower.includes("just phone")
-    ) {
-      result.billIncludesBroadband = false;
-    }
-
-    if (
-      lower.includes("including tv") ||
-      lower.includes("includes tv") ||
-      lower.includes("with tv") ||
-      lower.includes("tv package")
-    ) {
-      result.billIncludesTv = true;
-      result.hasTvService = true;
-    }
-    if (
-      lower.includes("not tv") ||
-      lower.includes("no tv") ||
-      lower.includes("without tv") ||
-      lower.includes("don't have tv") ||
-      lower.includes("just phone and internet")
-    ) {
-      result.billIncludesTv = false;
-      result.hasTvService = false;
-    }
-
-    // 5. Medical Alarm Screening
-    if (
-      lower.includes("yes i have a pendant") ||
-      lower.includes("yes, medical alarm") ||
-      lower.includes("have an emergency alarm") ||
-      lower.includes("lifeline") ||
-      lower.includes("red button") ||
-      lower.includes("care alarm")
-    ) {
-      result.medicalAlarm = true;
-    } else if (
-      lower.includes("no alarm") ||
-      lower.includes("no medical") ||
-      lower.includes("no pendant") ||
-      lower.includes("nothing like that")
-    ) {
-      result.medicalAlarm = false;
-    }
-
-    // 6. Mobile detection
-    if (lower.includes("no mobile") || lower.includes("don't have a mobile") || lower.includes("don't use a mobile")) {
-      result.hasMobile = false;
+    // 6. Consumer ID extraction
+    const idMatch = text.match(/(?:consumer\s*id|identification|reference|id)\s*(?:is|:)?\s*([a-zA-Z0-9]{5,15})/i);
+    if (idMatch && idMatch[1]) {
+      result.consumerId = idMatch[1].toUpperCase();
     }
 
     return result;
@@ -173,21 +155,24 @@ export class InformationExtractor {
   public static classifyResponseCategory(text: string): ResponseCategory {
     const lower = text.toLowerCase();
 
-    // Do not call
+    // Do not call (Sections 41, 42)
     if (
       lower.includes("do not call") ||
       lower.includes("take me off your list") ||
       lower.includes("never call again") ||
-      lower.includes("remove my number")
+      lower.includes("remove my number") ||
+      lower.includes("stop calling me")
     ) {
       return "DO_NOT_CALL";
     }
 
-    // Wrong person
+    // Wrong person (Sections 22, 23)
     if (
       lower.includes("wrong person") ||
-      lower.includes("not mr") ||
-      lower.includes("not mrs") ||
+      lower.includes("not the account holder") ||
+      lower.includes("partner's name") ||
+      lower.includes("husband's name") ||
+      lower.includes("wife's name") ||
       lower.includes("moved away") ||
       lower.includes("passed away") ||
       lower.includes("doesn't live here")
@@ -195,7 +180,7 @@ export class InformationExtractor {
       return "WRONG_PERSON";
     }
 
-    // Busy
+    // Busy (Section 4)
     if (
       lower.includes("busy") ||
       lower.includes("don't have time") ||
@@ -206,19 +191,20 @@ export class InformationExtractor {
       return "BUSY";
     }
 
-    // Suspicious / Security
+    // Suspicious / Security (Sections 18, 27)
     if (
       lower.includes("scam") ||
       lower.includes("who are you") ||
       lower.includes("is this genuine") ||
       lower.includes("how do i know") ||
+      lower.includes("don't trust") ||
       lower.includes("how did you get my number") ||
       lower.includes("why are you calling")
     ) {
       return "SUSPICIOUS";
     }
 
-    // Refusal
+    // Refusal (Sections 3, 49)
     if (
       lower.includes("not interested") ||
       lower.includes("don't want anything") ||
@@ -228,46 +214,51 @@ export class InformationExtractor {
       return "REFUSAL";
     }
 
-    // Doesn't remember
+    // Doesn't remember (Sections 7, 10, 26)
     if (
       lower.includes("don't remember") ||
       lower.includes("not sure") ||
       lower.includes("no idea") ||
       lower.includes("haven't got a clue") ||
-      lower.includes("can't recall")
+      lower.includes("can't recall") ||
+      lower.includes("don't have my bill")
     ) {
       return "DOESNT_REMEMBER";
     }
 
-    // Needs time
+    // Needs time (Sections 30, 31)
     if (
       lower.includes("need to check") ||
       lower.includes("find my bill") ||
       lower.includes("let me look") ||
       lower.includes("hold on a second") ||
+      lower.includes("think about it") ||
+      lower.includes("speak to my family") ||
       lower.includes("one moment")
     ) {
       return "NEEDS_TIME";
     }
 
-    // Confused
+    // Confused (Section 13)
     if (
       lower.includes("don't understand") ||
       lower.includes("what do you mean") ||
       lower.includes("pardon") ||
-      lower.includes("sorry?")
+      lower.includes("sorry?") ||
+      lower.includes("confused")
     ) {
       return "CONFUSED";
     }
 
-    // Positive
+    // Positive (Sections 1, 12, 44, 48)
     if (
       lower.includes("yes") ||
       lower.includes("good") ||
       lower.includes("fine") ||
       lower.includes("perfect") ||
       lower.includes("sounds good") ||
-      lower.includes("makes sense")
+      lower.includes("makes sense") ||
+      lower.includes("interested")
     ) {
       return "POSITIVE";
     }

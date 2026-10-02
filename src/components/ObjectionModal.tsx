@@ -5,7 +5,7 @@ import {
   HelpCircle,
   Check,
   Copy,
-  ChevronRight,
+  ArrowRight,
   ShieldCheck,
   AlertTriangle,
 } from "lucide-react";
@@ -31,14 +31,20 @@ export const ObjectionModal: React.FC<ObjectionModalProps> = ({
 
   const categories = [
     "ALL",
-    "AVAILABILITY",
-    "INTEREST",
+    "OPENING",
     "IDENTITY",
-    "DOB",
-    "CUSTOMER_ID",
-    "SECURITY",
+    "INTEREST",
+    "AVAILABILITY",
     "OFFER",
+    "VERIFICATION",
+    "SERVICE",
+    "BILLING",
+    "SECURITY",
+    "DATA_PRIVACY",
+    "DECISION",
+    "TECHNICAL",
     "COMPLIANCE",
+    "FLOW",
   ];
 
   const filtered = objectionLibrary.filter((item) => {
@@ -68,10 +74,10 @@ export const ObjectionModal: React.FC<ObjectionModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Approved UK Objection Library (Searchable)
+                52-Section UK Telecom Call Script &amp; Objection Library
               </h2>
               <p className="text-[11px] text-slate-400">
-                Authorized responses for customer hesitations, privacy questions, and security concerns
+                Authorized responses for all 52 customer questions, hesitations, privacy inquiries, and compliance rules
               </p>
             </div>
           </div>
@@ -89,7 +95,7 @@ export const ObjectionModal: React.FC<ObjectionModalProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Type customer words: 'busy', 'why DOB', 'why ID', 'is this a scam', 'not interested'..."
+              placeholder="Search across all 52 script sections (e.g. 'busy', 'BT', 'scam', 'DOB', 'bank details', 'not interested')..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none"
@@ -117,7 +123,7 @@ export const ObjectionModal: React.FC<ObjectionModalProps> = ({
         <div className="flex-1 overflow-y-auto p-5 space-y-3 text-xs">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-slate-400">
-              No objection matches found for "{search}". Try searching "busy", "scam", "DOB", or "ID".
+              No script matches found for "{search}". Try searching "busy", "scam", "BT", "contract", or "ID".
             </div>
           ) : (
             filtered.map((item) => (
@@ -127,6 +133,9 @@ export const ObjectionModal: React.FC<ObjectionModalProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-sparta-300 font-bold">
+                      Sec {item.sectionNumber}
+                    </span>
                     <span className="font-bold text-white text-sm">{item.name}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold">
                       {item.category}
@@ -148,68 +157,66 @@ export const ObjectionModal: React.FC<ObjectionModalProps> = ({
 
                 {/* Triggers */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] text-slate-500">Triggers:</span>
-                  {item.triggers.map((t, idx) => (
-                    <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 font-mono">
+                  <span className="text-[10px] text-slate-500 font-mono">TRIGGERS:</span>
+                  {item.triggers.map((t, tidx) => (
+                    <span
+                      key={tidx}
+                      className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-400 text-[10px]"
+                    >
                       "{t}"
                     </span>
                   ))}
                 </div>
 
-                {/* Recommended approved line */}
-                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 italic leading-relaxed text-xs">
+                {/* Approved Script Line */}
+                <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 text-white font-serif text-xs md:text-sm italic leading-relaxed whitespace-pre-line">
                   {item.recommendedResponse}
                 </div>
 
-                {item.optionalFollowUp && (
-                  <p className="text-[11px] text-slate-400">
-                    💡 <strong className="text-slate-300">Follow-up Guidance:</strong> {item.optionalFollowUp}
-                  </p>
-                )}
+                {/* Follow up & Stop Condition */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1">
+                  {item.optionalFollowUp && (
+                    <div className="flex items-start gap-1">
+                      <span className="text-amber-400">💡</span>
+                      <span>{item.optionalFollowUp}</span>
+                    </div>
+                  )}
+                  {item.stopCondition && (
+                    <div className="flex items-start gap-1">
+                      <span className="text-red-400">🛑</span>
+                      <span>{item.stopCondition}</span>
+                    </div>
+                  )}
+                </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-900">
-                  <span className="text-[10px] text-slate-500">
-                    Stop Rule: {item.stopCondition}
-                  </span>
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-900">
+                  <button
+                    onClick={() => handleCopy(item.recommendedResponse)}
+                    className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1 transition-colors"
+                  >
+                    {copiedText === item.recommendedResponse ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedText === item.recommendedResponse ? "Copied" : "Copy"}</span>
+                  </button>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleCopy(item.recommendedResponse)}
-                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1 border border-slate-700"
-                    >
-                      {copiedText === item.recommendedResponse ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                      <span>{copiedText === item.recommendedResponse ? "Copied" : "Copy"}</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        onSelectResponse(item.recommendedResponse);
-                        onClose();
-                      }}
-                      className="px-3 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
-                    >
-                      <span>Insert Into Script</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      onSelectResponse(item.recommendedResponse);
+                      onClose();
+                    }}
+                    className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold flex items-center gap-1 transition-colors shadow-sm"
+                  >
+                    <span>USE SCRIPT LINE</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/70 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-          >
-            Close Library
-          </button>
         </div>
       </div>
     </div>

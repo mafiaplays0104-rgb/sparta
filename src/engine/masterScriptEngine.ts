@@ -2,7 +2,6 @@ import {
   MasterStage,
   CustomerRecord,
   OfferConfig,
-  CustomerSentiment,
 } from "../types";
 
 export interface StageDefinition {
@@ -12,11 +11,7 @@ export interface StageDefinition {
   objective: string;
   getSayText: (customer: CustomerRecord, config: OfferConfig) => string;
   pauseInstruction: string;
-  subSteps?: {
-    id: string;
-    label: string;
-    getSayText: (customer: CustomerRecord, config: OfferConfig) => string;
-  }[];
+  goldenRuleNote?: string;
   quickResponses: {
     label: string;
     actionDescription: string;
@@ -36,29 +31,19 @@ export interface StageDefinition {
 
 export const STAGES_LIST: MasterStage[] = [
   "STAGE_1_OPENING",
-  "STAGE_2_CURRENT_SERVICE",
-  "STAGE_3_OFFER_INTRO",
-  "STAGE_4_DOB_VALIDATION",
-  "STAGE_5_CONFIRM_ADDRESS",
-  "STAGE_6_DIRECT_DEBIT_ID",
-  "STAGE_7_PERSONAL_DETAILS",
-  "STAGE_8_MOBILE_DETAILS",
-  "STAGE_9_FINAL_QUESTIONS",
-  "STAGE_10_FINAL_CHECK",
-  "STAGE_11_NATURAL_CLOSE",
+  "STAGE_2_VERIFICATION_ID",
+  "STAGE_3_VERIFICATION_COMPLETED",
+  "STAGE_4_CURRENT_SERVICE",
+  "STAGE_5_CURRENT_BILL",
+  "STAGE_6_EXPLAINING_REDUCTION",
+  "STAGE_7_FINAL_CONFIRMATION",
+  "STAGE_8_BEFORE_AGREEMENT",
+  "STAGE_9_CUSTOMER_DECISION",
 ];
 
 export class MasterScriptEngine {
   /**
-   * Helper to format time greeting (Good morning / Good afternoon)
-   */
-  public static getTimeGreeting(): string {
-    const hours = new Date().getHours();
-    return hours < 12 ? "Good morning" : "Good afternoon";
-  }
-
-  /**
-   * Helper to resolve [Customer Name] placeholder
+   * Helper to resolve customer name or greeting
    */
   public static getCustomerDisplayName(customer: CustomerRecord): string {
     const prefix = customer.title || "Mr / Mrs";
@@ -68,514 +53,432 @@ export class MasterScriptEngine {
     if (customer.firstName) {
       return customer.firstName;
     }
-    return "[Customer Name]";
+    return "";
   }
 
   /**
-   * Format a concise service summary for Stage 10
+   * Format a concise service summary for verification
    */
   public static getServiceSummary(customer: CustomerRecord): string {
     const parts: string[] = [];
     if (customer.monthlyBill) {
       parts.push(`paying around £${customer.monthlyBill.toFixed(2)}/month`);
     }
-    if (customer.landlineUsage) {
-      parts.push(`${customer.landlineUsage.toLowerCase().replace(/_/g, " ")} landline usage`);
+    if (customer.isUsingAtHome) {
+      parts.push(`home service: ${customer.isUsingAtHome}`);
     }
-    if (customer.billIncludesBroadband) {
-      parts.push("broadband included");
+    if (customer.consumerId) {
+      parts.push(`Consumer ID: ${customer.consumerId}`);
     }
-    if (customer.billIncludesTv) {
-      parts.push("TV service included");
-    }
-    if (customer.medicalAlarm !== undefined) {
-      parts.push(customer.medicalAlarm ? "medical alarm connected" : "no medical alarm");
-    }
-    return parts.length > 0 ? parts.join(", ") : "landline phone service";
+    return parts.length > 0 ? parts.join(", ") : "current telephone service";
   }
 
   /**
-   * Get the complete definition for any of the 11 Master Stages
+   * Get the complete definition for any of the 9 Master Stages of the UK Telecom 30% Reduction Script
    */
   public static getStageDefinition(
     stage: MasterStage,
     customer: CustomerRecord,
     config: OfferConfig
   ): StageDefinition {
-    const greeting = this.getTimeGreeting();
-    const custName = this.getCustomerDisplayName(customer);
-    const amountStr = customer.monthlyBill
-      ? customer.monthlyBill.toFixed(0)
+    const advisorName = config.advisorName || "Peter";
+    const companyName = config.companyName || "[COMPANY NAME]";
+    const approvedId = config.approvedAgentId || "[APPROVED ID]";
+    const billStr = customer.monthlyBill
+      ? `£${customer.monthlyBill.toFixed(2)}`
       : "[AMOUNT]";
-    const doorNum = customer.doorNumber || "[NUMBER]";
-    const postcodeStr = customer.postcode || "[POSTCODE]";
-    const contactNum = customer.contactNumber || customer.mobileNumber || "[NUMBER]";
-    const firstName = customer.firstName || "[NAME]";
-    const surname = customer.lastName || "[SURNAME]";
-    const addressStr = customer.address || (customer.doorNumber && customer.street ? `${customer.doorNumber} ${customer.street}` : "[ADDRESS]");
-    const serviceSummary = this.getServiceSummary(customer);
 
     switch (stage) {
       // -------------------------------------------------------------
-      // STAGE 1 — OPENING
+      // STAGE 1 — OPENING (Section 1)
       // -------------------------------------------------------------
       case "STAGE_1_OPENING":
         return {
           stage: "STAGE_1_OPENING",
           stageNumber: 1,
           stageName: "Stage 1 — Opening",
-          objective: "Greet customer professionally, confirm identity, build calm rapport, and check service health",
+          objective: "Introduce Peter, announce up to 30% monthly bill reduction, and confirm customer willingness to hear details",
+          goldenRuleNote: "Keep every spoken section short. One idea → one short paragraph → one question.",
           getSayText: () =>
-            `“${greeting}.\nAm I speaking with ${custName}?\nHi, my name is Alex, and I’m calling regarding your phone services. How are you doing today?”\n\nIf the customer responds positively:\n“GOOD TO HEAR THAT, So, just as a quick check, have you had any issues with your phone or broadband recently?”`,
-          pauseInstruction: "Pause and listen to their response naturally without talking over them.",
+            `“Hi, my name is ${advisorName}, and I'm calling regarding your telephone service. There's been a reduction of up to 30% on your monthly bill.\n\nI'm just calling to let you know about the reduction and check if it applies to your current service.\n\nIt will only take a couple of minutes. I'll check a few details and explain the saving clearly to you.”`,
+          pauseInstruction: "Pause and listen to the customer's response. Do not rush over the opening.",
           quickResponses: [
             {
-              label: "Positive & No issues",
-              actionDescription: "Customer is fine and has had no issues.",
-              nextStage: "STAGE_2_CURRENT_SERVICE",
-              guidance: "Acknowledge smoothly and move to Stage 2 Current Service.",
+              label: "Customer says YES / Continues",
+              actionDescription: "Customer is interested or happy to continue.",
+              nextStage: "STAGE_2_VERIFICATION_ID",
+              guidance: "Say: “Perfect, thank you. I'll just check a few details with you so I can make sure everything is correct.”",
             },
             {
-              label: "Has recent issues",
-              actionDescription: "Customer reports noise, slow broadband, or fault.",
-              autoFill: { issuesRecently: "Customer reported service issues" },
-              guidance: "Note the issue clearly. Emphasize that technical assistance / visit is included in the offer.",
+              label: "“What is this about?”",
+              actionDescription: "Customer asks for clarity on the call purpose.",
+              guidance: "Say: “It's regarding your current telephone service. There may be a reduction of up to 30% on your monthly bill. I'll quickly check your details first, then I'll explain what the reduction would mean for you.”",
             },
             {
-              label: "Customer is busy",
-              actionDescription: "Customer says they don't have time right now.",
-              category: "BUSY",
-              guidance: "Say: 'No problem at all. I understand. Would another time be more convenient for you?' Offer callback.",
-            },
-            {
-              label: "Who is calling?",
+              label: "“Who are you calling from?”",
               actionDescription: "Customer asks for company identity.",
-              guidance: "State approved company identity: 'I'm calling from Sparta on behalf of telephone line services.'",
+              guidance: `Say: “I'm calling from ${companyName} regarding your telephone service and current monthly bill. I'm contacting you about the available reduction and checking whether your service qualifies for it.”`,
             },
             {
-              label: "Wrong Person",
-              actionDescription: "The person answering is not the intended customer.",
-              category: "WRONG_PERSON",
-              guidance: "Do not disclose account details. Follow wrong person procedure.",
+              label: "“Are you from BT?”",
+              actionDescription: "Customer asks if you represent BT.",
+              guidance: `Say: “I'm calling from ${companyName}. I'll be happy to explain exactly who we are before we continue. I don't want to give you the wrong information, so I'll keep everything clear and straightforward.”`,
             },
             {
-              label: "Not Interested",
-              actionDescription: "Customer says not interested.",
-              category: "REFUSAL",
-              guidance: "Say: 'That's absolutely fine. I understand. Thank you for your time.'",
+              label: "“I'm not interested”",
+              actionDescription: "Customer expresses disinterest.",
+              guidance: "Say: “I completely understand. Before you decide, let me quickly explain what the reduction is about. If you're eligible, I'll tell you exactly what the saving could be. You can then decide whether you want to continue.”",
+            },
+            {
+              label: "“I'm busy”",
+              actionDescription: "Customer says they are busy.",
+              category: "BUSY",
+              guidance: "Say: “I completely understand. It shouldn't take long to check the account and see whether the reduction applies to your service. I'll keep it brief and only ask for the details needed to check your eligibility.”",
             },
           ],
-          why: "Establishes natural human rapport, verifies caller authority, and ensures no unaddressed service outages exist.",
-          nextStage: "STAGE_2_CURRENT_SERVICE",
+          why: "Clear, transparent identification and immediate statement of the up to 30% reduction without deceptive hooks.",
+          nextStage: "STAGE_2_VERIFICATION_ID",
         };
 
       // -------------------------------------------------------------
-      // STAGE 2 — GET TO KNOW THEIR CURRENT SERVICE
+      // STAGE 2 — CONSUMER IDENTIFICATION NUMBER (Section 7)
       // -------------------------------------------------------------
-      case "STAGE_2_CURRENT_SERVICE":
+      case "STAGE_2_VERIFICATION_ID":
         return {
-          stage: "STAGE_2_CURRENT_SERVICE",
+          stage: "STAGE_2_VERIFICATION_ID",
           stageNumber: 2,
-          stageName: "Stage 2 — Get To Know Their Current Service",
-          objective: "Discover landline usage patterns, billing satisfaction, 3-month average bill, and bundle inclusions",
+          stageName: "Stage 2 — Consumer Identification Number",
+          objective: "Request and verify the Consumer Identification Number to ensure the correct account is reviewed",
+          goldenRuleNote: "Ask clearly for the Consumer Identification Number and explain its purpose calmly.",
           getSayText: () =>
-            `“Okay, I understand.\nAnd your landline — do you use that quite often?\nOr is it mainly for incoming calls?”\n\n[Pause and listen]\n\n“Right, okay.\nAnd are you happy with the bills you're getting at the moment?\nDo you feel you're paying about right for what you use?”\n\n[Pause and listen]\n\n“Okay.\nRoughly, how much would you say your average bill has been over the last three months?”\n\n[Pause and listen]\n\n“Okay, thank you.\nAnd does that amount include your phone, internet and TV?\nOr just your phone and internet?”\n\n[Pause and listen]\n\n“Alright, that makes sense.”`,
-          pauseInstruction: "Pause and listen after each specific question. Allow customer to complete their answer.",
+            `“Before I continue, I just need to verify the account. Could you please give me your Consumer Identification Number?”`,
+          pauseInstruction: "Pause and listen for the customer's Consumer Identification Number.",
           quickResponses: [
             {
-              label: "Low usage / Incoming only (~£50-£70)",
-              actionDescription: "Customer rarely uses landline and pays around average.",
-              autoFill: { landlineUsage: "LOW", billSatisfaction: "PAYING_TOO_MUCH" },
-              guidance: "Excellent match for the 500-minute capped offer.",
+              label: "Provides Consumer ID",
+              actionDescription: "Customer reads out their Consumer Identification Number.",
+              autoFill: { consumerIdStatus: "VERIFIED" },
+              nextStage: "STAGE_3_VERIFICATION_COMPLETED",
+              guidance: "Record Consumer ID and move smoothly to Verification Completed.",
             },
             {
-              label: "Gives approximate amount",
-              actionDescription: "Customer says 'about £65' or 'around £80'.",
-              autoFill: { billApproximate: true },
-              guidance: "Store as approximate = TRUE. Do not force an exact decimal.",
+              label: "“Why do you need it?”",
+              actionDescription: "Customer asks for the reason.",
+              guidance: "Say: “It's simply to verify the correct account and make sure I'm looking at the right service details. I don't want to give you information for the wrong account.”",
             },
             {
-              label: "Gives exact amount",
-              actionDescription: "Customer says '£72.43'.",
-              autoFill: { billApproximate: false },
-              guidance: "Store exact figure into bill record.",
+              label: "Doesn't know where to find it",
+              actionDescription: "Customer cannot find the number on their bill.",
+              autoFill: { consumerIdUnavailable: true, consumerIdStatus: "NOT_AVAILABLE" },
+              guidance: "Say: “That's absolutely fine. Take your time and have a look at your latest bill or service information. It may be shown with your other account details.”",
             },
             {
-              label: "Doesn't remember bill",
-              actionDescription: "Customer has no idea what they pay.",
-              guidance: "Say: 'That’s alright, no problem. If you have an old phone bill or statement nearby, you can have a quick look. There’s no need to guess.'",
-            },
-            {
-              label: "Includes Phone + Broadband only",
-              actionDescription: "Dual-play service without TV.",
-              autoFill: { billIncludesPhone: true, billIncludesBroadband: true, billIncludesTv: false },
-            },
-            {
-              label: "Includes Phone + Broadband + TV",
-              actionDescription: "Triple-play bundle.",
-              autoFill: { billIncludesPhone: true, billIncludesBroadband: true, billIncludesTv: true, hasTvService: true },
+              label: "Customer Refuses ID",
+              actionDescription: "Customer is uncomfortable sharing ID.",
+              autoFill: { consumerIdRefused: true, consumerIdStatus: "REFUSED" },
+              guidance: "Say: “That's completely fine. Please don't share anything you're uncomfortable sharing. Without verification, I may not be able to check the account details for you.”",
             },
           ],
-          why: "Gathers legitimate baseline billing and usage details to confirm the customer is overpaying for unused minutes.",
-          complianceWarning: "If customer gives conflicting bill amounts, use Information Clarification prompt.",
-          requiredFields: ["monthlyBill"],
-          nextStage: "STAGE_3_OFFER_INTRO",
+          why: "Verifies account legitimacy and prevents giving telephone service details to an unverified recipient.",
+          complianceWarning: "Never pressure the customer for identification. If refused, respect their comfort level.",
+          nextStage: "STAGE_3_VERIFICATION_COMPLETED",
           prevStage: "STAGE_1_OPENING",
         };
 
       // -------------------------------------------------------------
-      // STAGE 3 — INTRODUCE THE OFFER NATURALLY
+      // STAGE 3 — VERIFICATION COMPLETED (Section 8)
       // -------------------------------------------------------------
-      case "STAGE_3_OFFER_INTRO":
+      case "STAGE_3_VERIFICATION_COMPLETED":
         return {
-          stage: "STAGE_3_OFFER_INTRO",
+          stage: "STAGE_3_VERIFICATION_COMPLETED",
           stageNumber: 3,
-          stageName: "Stage 3 — Introduce The Offer Naturally",
-          objective: "Present the approved 500-minute offer, dedicated service, included tech visit, and written terms",
+          stageName: "Stage 3 — Verification Completed",
+          objective: "Acknowledge verification completion and transition into basic service check",
+          goldenRuleNote: "Keep the acknowledgement brief and transition smoothly.",
           getSayText: () =>
-            `“Based on what you've just told me, I can see you're paying around £${amountStr}.\nAnd it sounds like you're not really using all of the minutes included in your current service.\nThere is an offer available that may be more suitable for the way you're using your phone.\nIt includes ${config.minutes} cross-network anytime calling minutes, along with dedicated customer service.\nAnd if you need technical assistance, the technical visit is included as part of the offer.\nThe full details and terms would be provided to you in writing, so you can read everything properly before any changes are made.”\n\n[Pause and let the customer respond]\n\n“Does that all make sense so far?”`,
-          pauseInstruction: "Pause and let the customer absorb the offer details. Confirm understanding before moving forward.",
+            `“Thank you. That's all I needed for the account verification.\n\nI'll now check a few basic details about your current service so I can explain the reduction correctly.”`,
+          pauseInstruction: "Pause briefly and move to confirming current service.",
           quickResponses: [
             {
-              label: "Makes sense / Sounds good",
-              actionDescription: "Customer understands and is happy to proceed.",
-              nextStage: "STAGE_4_DOB_VALIDATION",
-              guidance: "Move smoothly to Stage 4 Age/DOB eligibility check.",
+              label: "Continue to Current Service",
+              actionDescription: "Proceed to check home telephone usage.",
+              nextStage: "STAGE_4_CURRENT_SERVICE",
             },
             {
-              label: "Asks about discount / savings",
-              actionDescription: "Customer asks how much they will save.",
-              guidance: "Use the Bill Reduction & 30% Savings Calculator tool to show exact monthly & annual savings.",
+              label: "Customer has a question",
+              actionDescription: "Customer asks something before proceeding.",
+              guidance: "Say: “Of course. What would you like me to explain? I'll answer that first, then we can continue from where we stopped.”",
             },
             {
-              label: "Wants written info first",
-              actionDescription: "Customer requests to see written terms.",
-              guidance: "Reassure: 'All full details and terms are sent to you in writing to read over before any changes take effect.'",
-            },
-            {
-              label: "Is this a new contract / provider?",
-              actionDescription: "Customer asks about disruption.",
-              guidance: "Clarify: 'Your existing telephone line and setup remain intact; this simply unlocks the optimized rate.'",
+              label: "Customer interrupts",
+              actionDescription: "Customer speaks or asks for clarification.",
+              guidance: "Say: “Of course, please go ahead. I'll listen to your question first, and then I'll explain the part you want to know about.”",
             },
           ],
-          why: "Transparency rule: Ensure customer fully comprehends the offer terms and written guarantee before taking eligibility details.",
-          complianceWarning: "Do NOT invent discount percentages, contract lengths, or Openreach claims beyond configured parameters.",
-          nextStage: "STAGE_4_DOB_VALIDATION",
-          prevStage: "STAGE_2_CURRENT_SERVICE",
+          why: "Signals completion of the security gate so customer feels at ease.",
+          nextStage: "STAGE_4_CURRENT_SERVICE",
+          prevStage: "STAGE_2_VERIFICATION_ID",
         };
 
       // -------------------------------------------------------------
-      // STAGE 4 — AGE / DOB VALIDATION
+      // STAGE 4 — CURRENT SERVICE (Section 9)
       // -------------------------------------------------------------
-      case "STAGE_4_DOB_VALIDATION":
+      case "STAGE_4_CURRENT_SERVICE":
         return {
-          stage: "STAGE_4_DOB_VALIDATION",
+          stage: "STAGE_4_CURRENT_SERVICE",
           stageNumber: 4,
-          stageName: "Stage 4 — Age / DOB Validation",
-          objective: "Perform non-intrusive age / date of birth eligibility check using DOB Calculator",
+          stageName: "Stage 4 — Current Service",
+          objective: "Confirm whether the customer is currently using the telephone service at their home",
+          goldenRuleNote: "One simple, direct question: 'Are you currently using this telephone service at your home?'",
           getSayText: () =>
-            `“Perfect.\nThere’s just one quick eligibility check I need to do at this stage.\nCould you please confirm your date of birth for me?”\n\n[Pause and listen]\n\n“Thank you, I’ve got that.”\n\nIf the customer asks why:\n“It’s simply part of the eligibility check for the offer we’ve just discussed.”`,
-          pauseInstruction: "Pause and listen carefully. If the customer gives their age or birth year, use the DOB Calculator.",
+            `“Can I just confirm, are you currently using this telephone service at your home?”`,
+          pauseInstruction: "Pause and listen for home service confirmation.",
           quickResponses: [
             {
-              label: "Provides full DOB",
-              actionDescription: "Customer gives exact day, month, and year.",
-              guidance: "Validate against campaign bracket and move to Address confirmation.",
+              label: "YES (Using at home)",
+              actionDescription: "Customer confirms home use.",
+              autoFill: { isUsingAtHome: "YES" },
+              nextStage: "STAGE_5_CURRENT_BILL",
+              guidance: "Say: “Perfect, thank you. I'll just confirm a couple more details.”",
             },
             {
-              label: "Gives age (e.g. 'I am 72')",
-              actionDescription: "Customer gives their age instead of full DOB.",
-              guidance: "Open DOB Tool → Calculate birth year (2026 - 72 = 1954) and confirm.",
+              label: "NO (Not at home)",
+              actionDescription: "Customer says it is not a home line.",
+              autoFill: { isUsingAtHome: "NO" },
+              guidance: "Say: “No problem. Let me make sure I have the correct service information before we continue.”",
             },
             {
-              label: "Gives birth year (e.g. '1954')",
-              actionDescription: "Customer gives birth year.",
-              guidance: "Open DOB Tool → Calculate age (72) and verify eligibility.",
-            },
-            {
-              label: "Why do you need my DOB?",
-              actionDescription: "Customer asks why date of birth is needed.",
-              guidance: "Say: 'It’s simply part of the eligibility check for the offer we’ve just discussed.'",
-            },
-            {
-              label: "Customer refuses DOB",
-              actionDescription: "Customer is uncomfortable sharing date of birth.",
-              autoFill: { dobRefused: true },
-              guidance: "Say: 'That's completely fine. I understand you may not want to provide that over the phone. Without the eligibility check, I won't be able to complete that part of the process.'",
+              label: "DON'T KNOW / UNSURE",
+              actionDescription: "Customer is unsure.",
+              autoFill: { isUsingAtHome: "DONT_KNOW" },
+              guidance: "Say: “That's completely fine. I'll ask another simple question to help confirm the service.”",
             },
           ],
-          why: "Validates eligibility for campaign tariff bracket without storing unnecessary personal background.",
-          complianceWarning: "Never infer age from accent, voice, or appearance. If refused, do not pressure.",
-          requiredFields: ["dob"],
-          allowFallback: true,
-          fallbackText: "Customer refused DOB → Log and proceed with authorized alternative or disposition.",
-          nextStage: "STAGE_5_CONFIRM_ADDRESS",
-          prevStage: "STAGE_3_OFFER_INTRO",
+          why: "Ensures the telephone service is eligible residential service before discussing pricing.",
+          nextStage: "STAGE_5_CURRENT_BILL",
+          prevStage: "STAGE_3_VERIFICATION_COMPLETED",
         };
 
       // -------------------------------------------------------------
-      // STAGE 5 — CONFIRM THE ADDRESS
+      // STAGE 5 — CURRENT MONTHLY BILL (Section 10)
       // -------------------------------------------------------------
-      case "STAGE_5_CONFIRM_ADDRESS":
+      case "STAGE_5_CURRENT_BILL":
         return {
-          stage: "STAGE_5_CONFIRM_ADDRESS",
+          stage: "STAGE_5_CURRENT_BILL",
           stageNumber: 5,
-          stageName: "Stage 5 — Confirm The Address",
-          objective: "Confirm registered door number and UK postcode for documentation delivery",
+          stageName: "Stage 5 — Current Monthly Bill",
+          objective: "Ask customer roughly how much they currently pay each month for their telephone service",
+          goldenRuleNote: "Ask for rough monthly cost. Do not force an exact decimal if they give an estimate.",
           getSayText: () =>
-            `“Right, thank you.\nLet me just check your address while I have you.\nI have your door number as ${doorNum}.\nAnd your postcode as ${postcodeStr}.\nIs that correct?”\n\n[Pause and listen]\n\n“Perfect, thank you.”`,
-          pauseInstruction: "Pause and listen for confirmation or correction.",
+            `“Could you tell me roughly how much you're currently paying each month for your telephone service?”`,
+          pauseInstruction: "Pause and listen. Allow them to check their bill if needed.",
           quickResponses: [
             {
-              label: "Address is correct",
-              actionDescription: "Customer confirms door number and postcode.",
-              autoFill: { addressConfirmed: true },
-              nextStage: "STAGE_6_DIRECT_DEBIT_ID",
+              label: "Customer gives amount (e.g. £50 - £80)",
+              actionDescription: "Customer provides approximate or exact bill amount.",
+              nextStage: "STAGE_6_EXPLAINING_REDUCTION",
+              guidance: "Say: “Thank you. That gives me a better idea of your current monthly cost.”",
             },
             {
-              label: "Customer corrects door number",
-              actionDescription: "Door number was different.",
-              guidance: "Update door number field immediately.",
+              label: "Customer doesn't know",
+              actionDescription: "Customer does not know the amount.",
+              guidance: "Say: “That's fine. If you have your latest bill nearby, you can check it for me.”",
             },
             {
-              label: "Customer corrects postcode",
-              actionDescription: "Postcode differs from record.",
-              guidance: "Validate UK postcode format (e.g. SW1A 1AA) and update.",
+              label: "“I already have a discount”",
+              actionDescription: "Customer mentions an existing promotional tariff.",
+              guidance: "Say: “That's fine. I'll take that into account when checking the current service. The purpose of the call is to see whether any available reduction applies to your account.”",
             },
             {
-              label: "Moved / Wrong address",
-              actionDescription: "Customer reports having moved recently.",
-              guidance: "Record current address for proper postal dispatch.",
+              label: "“My bill is already cheap”",
+              actionDescription: "Customer says they already pay a low bill.",
+              guidance: "Say: “That's good to hear. I'll simply check the current service before saying whether anything can be reduced. If there is no further reduction available, I'll tell you clearly.”",
             },
           ],
-          why: "Ensures written guarantee and terms reach the correct physical property.",
-          requiredFields: ["doorNumber", "postcode"],
-          nextStage: "STAGE_6_DIRECT_DEBIT_ID",
-          prevStage: "STAGE_4_DOB_VALIDATION",
+          why: "Baseline billing is required to calculate the exact 30% reduction accurately.",
+          nextStage: "STAGE_6_EXPLAINING_REDUCTION",
+          prevStage: "STAGE_4_CURRENT_SERVICE",
         };
 
       // -------------------------------------------------------------
-      // STAGE 6 — DIRECT DEBIT ELIGIBILITY / CUSTOMER IDENTIFICATION
+      // STAGE 6 — EXPLAINING THE REDUCTION (Section 11)
       // -------------------------------------------------------------
-      case "STAGE_6_DIRECT_DEBIT_ID":
+      case "STAGE_6_EXPLAINING_REDUCTION":
         return {
-          stage: "STAGE_6_DIRECT_DEBIT_ID",
+          stage: "STAGE_6_EXPLAINING_REDUCTION",
           stageNumber: 6,
-          stageName: "Stage 6 — Direct Debit Eligibility / Customer Identification",
-          objective: "Verify customer ID number linked to account with IBANGB prefix formatting and read-back",
+          stageName: "Stage 6 — Explaining The Reduction",
+          objective: "Explain how the available 30% reduction lowers monthly cost based on the service details checked",
+          goldenRuleNote: "Explain reduction in two short sentences. Do not guess exact figures until verified.",
           getSayText: () =>
-            `“Alright, just one more quick check regarding the Direct Debit eligibility.\nI need to verify the customer identification number linked to your account.\nCould you please confirm the customer ID you have with you?”\n\n[Pause and listen]\n\n*If the customer ID begins with “IBANGB” and that is how it appears on authorized account info, ask them to read the identifier exactly as shown.*\n\n“Thank you.\nLet me just repeat that back to make sure I’ve got it correctly.”\n\n[Repeat the identifier slowly]\n\n“Is that correct?”\n\n[Pause and listen]\n\n“Perfect, thank you.”\n\n---\n*If the customer asks why the ID is needed:*\n“It’s just being used to match your account and check the Direct Debit eligibility. It isn't a request for your PIN, password or OTP.”\n\n*If the customer does not have the ID available:*\n“That’s absolutely fine. Please don't guess it. We can leave that part for the relevant team to verify through the proper process.”\n\n*If the customer is uncomfortable providing it:*\n“No problem at all. I completely understand. You don't have to provide anything you're not comfortable sharing over the phone.”`,
-          pauseInstruction: "Pause and listen carefully. Repeat back slowly to ensure absolute accuracy.",
+            `“Based on the information you've given me, the available reduction could lower your monthly telephone cost.\n\nThe exact amount depends on your current service and the details we've just checked.”`,
+          pauseInstruction: "Pause and confirm the customer understands before moving to final review.",
           quickResponses: [
             {
-              label: "Provides valid ID (e.g. IBANGB...)",
-              actionDescription: "Customer provides correctly formatted identifier.",
-              autoFill: { customerIdStatus: "VERIFIED" },
-              guidance: "Repeat identifier back slowly and confirm accuracy.",
+              label: "Customer is Interested",
+              actionDescription: "Customer is positive and wants to proceed.",
+              nextStage: "STAGE_7_FINAL_CONFIRMATION",
+              guidance: "Say: “That's good. I'll quickly go through the remaining details with you. This is just to make sure the information on the account is correct before we continue.”",
             },
             {
-              label: "Asks why ID is needed",
-              actionDescription: "Customer asks for the reason.",
-              guidance: "Say: 'It’s just being used to match your account and check the Direct Debit eligibility. It isn't a request for your PIN, password or OTP.'",
+              label: "“How much exactly?”",
+              actionDescription: "Customer asks for the exact penny amount.",
+              guidance: "Say: “I'll confirm the exact figure once the remaining details have been checked. I don't want to give you an incorrect amount before everything is verified.”",
             },
             {
-              label: "Does not have ID with them",
-              actionDescription: "Customer cannot locate customer ID.",
-              autoFill: { customerIdStatus: "NOT_AVAILABLE", customerIdUnavailable: true },
-              guidance: "Say: 'That’s absolutely fine. Please don't guess it. We can leave that part for the relevant team to verify through the proper process.'",
+              label: "“How much will I save?”",
+              actionDescription: "Customer asks about savings breakdown.",
+              guidance: "Say: “The reduction can be up to 30%, depending on your current service and monthly bill. I'll check your details first, so I can give you the correct information rather than guessing.”",
             },
             {
-              label: "Uncomfortable providing ID",
-              actionDescription: "Customer prefers not to share ID.",
-              autoFill: { customerIdStatus: "REFUSED", customerIdRefused: true },
-              guidance: "Say: 'No problem at all. I completely understand. You don't have to provide anything you're not comfortable sharing over the phone.'",
+              label: "“Is this a new contract?”",
+              actionDescription: "Customer asks about contract terms.",
+              guidance: "Say: “Before I give you an answer, I'll check the details of your current service. I'll then explain whether the reduction involves any change to your existing service or agreement.”",
             },
             {
-              label: "Invalid format identifier",
-              actionDescription: "ID does not match expected format.",
-              autoFill: { customerIdStatus: "INVALID" },
-              guidance: "Say: 'The identifier doesn't appear to match the expected format. Could you please check it once more?'",
+              label: "Customer is Confused",
+              actionDescription: "Customer finds the explanation unclear.",
+              guidance: "Say: “No problem at all. I'll keep it simple. I'm checking your current telephone service to see whether the available bill reduction applies to you.”",
             },
           ],
-          why: "Matches account for Direct Debit eligibility check without asking for prohibited financial credentials.",
-          complianceWarning: "STRICT COMPLIANCE: NEVER ask for PIN, OTP, online passwords, or card security codes.",
-          allowFallback: true,
-          fallbackText: "Customer ID not available / refused → Proceed to personal details confirmation.",
-          nextStage: "STAGE_7_PERSONAL_DETAILS",
-          prevStage: "STAGE_5_CONFIRM_ADDRESS",
+          why: "Presents commercial benefit clearly without exaggerated claims or premature promises.",
+          nextStage: "STAGE_7_FINAL_CONFIRMATION",
+          prevStage: "STAGE_5_CURRENT_BILL",
         };
 
       // -------------------------------------------------------------
-      // STAGE 7 — CONFIRM THEIR PERSONAL DETAILS
+      // STAGE 7 — FINAL CONFIRMATION (Section 45)
       // -------------------------------------------------------------
-      case "STAGE_7_PERSONAL_DETAILS":
+      case "STAGE_7_FINAL_CONFIRMATION":
         return {
-          stage: "STAGE_7_PERSONAL_DETAILS",
+          stage: "STAGE_7_FINAL_CONFIRMATION",
           stageNumber: 7,
-          stageName: "Stage 7 — Confirm Their Personal Details",
-          objective: "Confirm First Name, Surname, Door number, Postcode, and Contact number",
+          stageName: "Stage 7 — Final Confirmation",
+          objective: "Thank customer for going through details and prepare to explain reduction & terms",
+          goldenRuleNote: "One short paragraph setting expectations for terms review.",
           getSayText: () =>
-            `“Right, we're nearly there.\nLet me just go through a few details with you.\nYour first name is ${firstName}?\nAnd your surname is ${surname}?”\n\n[Pause]\n\n“Thank you.\nYour door number is ${doorNum}.\nYour postcode is ${postcodeStr}.\nAnd your contact number is ${contactNum}.\nIs everything correct?”\n\n[Pause and listen]\n\n“Perfect.”`,
-          pauseInstruction: "Pause between name verification and full contact detail verification.",
+            `“Thank you for going through those details with me.\n\nI'll now explain the available reduction and any important terms before you decide whether you want to continue.”`,
+          pauseInstruction: "Pause and check if customer is ready for terms.",
           quickResponses: [
             {
-              label: "All details correct",
-              actionDescription: "Customer confirms name, address, and contact number.",
-              autoFill: { personalDetailsConfirmed: true },
-              nextStage: "STAGE_8_MOBILE_DETAILS",
+              label: "Customer agrees to continue",
+              actionDescription: "Customer confirms they are ready.",
+              nextStage: "STAGE_8_BEFORE_AGREEMENT",
+              guidance: "Say: “Perfect, thank you. I'll keep everything simple and go through the remaining details one at a time.”",
             },
             {
-              label: "Corrects spelling of name",
-              actionDescription: "Customer specifies spelling.",
-              guidance: "Update first name or surname field.",
+              label: "“I want to think about it”",
+              actionDescription: "Customer wants thinking time.",
+              guidance: "Say: “Of course. There's no problem with taking some time to think about it. I'll make sure you've understood the reduction and what it means before you make any decision.”",
             },
             {
-              label: "Provides alternate contact number",
-              actionDescription: "Customer provides preferred telephone number.",
-              guidance: "Update contact number field.",
+              label: "“I need to speak to my family”",
+              actionDescription: "Customer wishes to consult family.",
+              guidance: "Say: “That's completely fine. It's always better to discuss changes to your service with anyone else involved in managing the household bills.”",
+            },
+            {
+              label: "“Just send me something”",
+              actionDescription: "Customer wants written postal details.",
+              guidance: "Say: “That's understandable. I'll explain what the offer involves first, so you know exactly what information you're being sent and why.”",
             },
           ],
-          why: "Verifies account holder record for proper CRM routing and legal contract generation.",
-          requiredFields: ["firstName", "lastName", "contactNumber"],
-          nextStage: "STAGE_8_MOBILE_DETAILS",
-          prevStage: "STAGE_6_DIRECT_DEBIT_ID",
+          why: "Transparent transition ensuring customer never feels rushed into a decision.",
+          nextStage: "STAGE_8_BEFORE_AGREEMENT",
+          prevStage: "STAGE_6_EXPLAINING_REDUCTION",
         };
 
       // -------------------------------------------------------------
-      // STAGE 8 — MOBILE DETAILS
+      // STAGE 8 — BEFORE ANY AGREEMENT (Section 46)
       // -------------------------------------------------------------
-      case "STAGE_8_MOBILE_DETAILS":
+      case "STAGE_8_BEFORE_AGREEMENT":
         return {
-          stage: "STAGE_8_MOBILE_DETAILS",
+          stage: "STAGE_8_BEFORE_AGREEMENT",
           stageNumber: 8,
-          stageName: "Stage 8 — Mobile Details",
-          objective: "Capture mobile telephone number, type (PAYG vs Contract), and network provider",
+          stageName: "Stage 8 — Before Any Agreement",
+          objective: "Verify customer understands price, service, and all relevant terms before concluding",
+          goldenRuleNote: "Ensure absolute transparency and encourage questions.",
           getSayText: () =>
-            `“Do you also have a mobile number that you use?”\n\nIf yes:\n“Okay, could you give me that number, please?”\n\n[Repeat it back]\n“So I have that as ${customer.mobileNumber || "[NUMBER]"}, is that right?”\n\n[Pause]\n\n“Thank you.\nAnd is that pay-as-you-go or a contract phone?\nAnd which network are you with?”\n\n[Pause and listen]\n\n“Okay, got it.”`,
-          pauseInstruction: "Pause and repeat mobile number back slowly to confirm accuracy.",
+            `“Before we go any further, I'll make sure you understand the price, service, and any relevant terms.\n\nIf anything is unclear, please ask me and I'll explain it.”`,
+          pauseInstruction: "Pause and listen carefully. Answer all customer questions thoroughly.",
           quickResponses: [
             {
-              label: "Contract Mobile (e.g. EE, O2, Vodafone)",
-              actionDescription: "Customer has a monthly mobile contract.",
-              autoFill: { hasMobile: true, mobileType: "CONTRACT" },
+              label: "Customer understands & is ready",
+              actionDescription: "Customer indicates complete understanding.",
+              nextStage: "STAGE_9_CUSTOMER_DECISION",
             },
             {
-              label: "Pay-As-You-Go Mobile",
-              actionDescription: "Customer tops up via PAYG.",
-              autoFill: { hasMobile: true, mobileType: "PAYG" },
+              label: "Customer has a question",
+              actionDescription: "Customer asks for clarification.",
+              guidance: "Say: “Of course. What would you like me to explain? I'll answer that first, then we can continue from where we stopped.”",
             },
             {
-              label: "No Mobile phone",
-              actionDescription: "Customer does not own or use a mobile.",
-              autoFill: { hasMobile: false, mobileNumber: "None" },
-              nextStage: "STAGE_9_FINAL_QUESTIONS",
+              label: "Customer asks you to repeat",
+              actionDescription: "Customer wants the line repeated.",
+              guidance: "Say: “Of course. I'll say it again slowly and keep it as simple as possible.”",
+            },
+            {
+              label: "“I'm not sure”",
+              actionDescription: "Customer is hesitant or undecided.",
+              guidance: "Say: “That's completely fine. I'll explain the part you're unsure about, and then you can decide whether you want to continue.”",
+            },
+            {
+              label: "“Will my number change?”",
+              actionDescription: "Customer asks about phone number retention.",
+              guidance: "Say: “I'll explain any service changes before anything is agreed. I don't want you to continue without understanding exactly what would happen.”",
+            },
+            {
+              label: "“Will my service stop?”",
+              actionDescription: "Customer asks about service interruption.",
+              guidance: "Say: “No, the purpose is to discuss the available reduction on your service. I'll explain any changes clearly before anything is agreed or processed.”",
             },
           ],
-          why: "Provides alternative contact channel for SMS updates and dispatch tracking.",
-          nextStage: "STAGE_9_FINAL_QUESTIONS",
-          prevStage: "STAGE_7_PERSONAL_DETAILS",
+          why: "Mandatory compliance checkpoint: Full disclosure before agreement.",
+          nextStage: "STAGE_9_CUSTOMER_DECISION",
+          prevStage: "STAGE_7_FINAL_CONFIRMATION",
         };
 
       // -------------------------------------------------------------
-      // STAGE 9 — A COUPLE OF FINAL QUESTIONS
+      // STAGE 9 — CUSTOMER DECISION & CLOSE (Sections 48, 49, 43)
       // -------------------------------------------------------------
-      case "STAGE_9_FINAL_QUESTIONS":
-        return {
-          stage: "STAGE_9_FINAL_QUESTIONS",
-          stageNumber: 9,
-          stageName: "Stage 9 — A Couple Of Final Questions",
-          objective: "Screen for life-critical medical alarms and document existing TV equipment make/model",
-          getSayText: () =>
-            `“Just a couple more things and then we're all done.\nDo you have any medical alarm connected to your phone line?”\n\n[Pause]\n\n“Okay, thank you.\nAnd do you have a TV service at home?”\n\n[Pause]\n\n“Could you tell me the make and model of your TV?”\n\nIf they ask why:\n“It’s just so we have the correct information about the equipment you're currently using.”`,
-          pauseInstruction: "Pause after medical alarm question. Never rush over medical safety screening.",
-          quickResponses: [
-            {
-              label: "No Medical Alarm & No TV",
-              actionDescription: "Standard telephone setup.",
-              autoFill: { medicalAlarm: false, hasTvService: false },
-              nextStage: "STAGE_10_FINAL_CHECK",
-            },
-            {
-              label: "Has Medical Alarm (Pendant / Lifeline)",
-              actionDescription: "Life-safety device connected to landline.",
-              autoFill: { medicalAlarm: true },
-              guidance: "CRITICAL: Medical alarm flagged. Special care routing applies.",
-            },
-            {
-              label: "Has TV (e.g. Samsung 43-inch, LG, Sony)",
-              actionDescription: "Customer provides TV make and model.",
-              autoFill: { hasTvService: true },
-            },
-            {
-              label: "Why ask about TV / equipment?",
-              actionDescription: "Customer inquires about TV equipment question.",
-              guidance: "Say: 'It’s just so we have the correct information about the equipment you're currently using.'",
-            },
-          ],
-          why: "Critical vulnerability screening: Life alarms must never be disturbed. TV equipment profile aids compatibility check.",
-          complianceWarning: "If Medical Alarm is present, lead must be marked with medical alarm flag for specialist fulfillment.",
-          requiredFields: ["medicalAlarm"],
-          nextStage: "STAGE_10_FINAL_CHECK",
-          prevStage: "STAGE_8_MOBILE_DETAILS",
-        };
-
-      // -------------------------------------------------------------
-      // STAGE 10 — FINAL CHECK
-      // -------------------------------------------------------------
-      case "STAGE_10_FINAL_CHECK":
-        return {
-          stage: "STAGE_10_FINAL_CHECK",
-          stageNumber: 10,
-          stageName: "Stage 10 — Final Check",
-          objective: "Perform comprehensive, transparent summary check of customer name, address, phone, and services",
-          getSayText: () =>
-            `“Alright, ${custName}, we're almost finished.\nLet me quickly go through everything with you, just to make sure I've got it right.\n\nYour name is ${firstName} ${surname}.\nYour address is ${addressStr}.\nYour postcode is ${postcodeStr}.\nYour contact number is ${contactNum}.\nAnd your current service information is ${serviceSummary}.\n\nIs everything correct?”\n\n[Pause and listen]\n\n“Perfect, thank you.\nI appreciate you going through that with me.”`,
-          pauseInstruction: "Pause and listen to ensure customer agrees with all summarized information.",
-          quickResponses: [
-            {
-              label: "Everything confirmed correct",
-              actionDescription: "Customer agrees with all summarized items.",
-              nextStage: "STAGE_11_NATURAL_CLOSE",
-            },
-            {
-              label: "Customer makes a correction",
-              actionDescription: "Customer spots a small mistake.",
-              guidance: "Edit the appropriate customer field and re-confirm.",
-            },
-          ],
-          why: "FCA and Ofcom fair treatment requirement: Customer must have full clarity over what has been recorded.",
-          nextStage: "STAGE_11_NATURAL_CLOSE",
-          prevStage: "STAGE_9_FINAL_QUESTIONS",
-        };
-
-      // -------------------------------------------------------------
-      // STAGE 11 — NATURAL CLOSE
-      // -------------------------------------------------------------
-      case "STAGE_11_NATURAL_CLOSE":
+      case "STAGE_9_CUSTOMER_DECISION":
       default:
         return {
-          stage: "STAGE_11_NATURAL_CLOSE",
-          stageNumber: 11,
-          stageName: "Stage 11 — Natural Close",
-          objective: "Warm, professional handoff to the relevant department and polite call conclusion",
+          stage: "STAGE_9_CUSTOMER_DECISION",
+          stageNumber: 9,
+          stageName: "Stage 9 — Customer Decision",
+          objective: "Receive the customer's decision on the 30% reduction and close politely and professionally",
+          goldenRuleNote: "Respect customer decision immediately without pressure.",
           getSayText: () =>
-            `“That's everything I needed from you today.\nI'll pass your details across to the relevant team.\nThey'll be able to go through the available options with you and explain the service, pricing and terms.\nAnd you'll have the relevant information to look over before making any changes.\nThank you very much for your time, ${custName}.\nHave a good day.”`,
-          pauseInstruction: "Deliver closing warmly and allow customer to say goodbye.",
+            `“Would you like to proceed with the 30% reduction on your telephone service?”`,
+          pauseInstruction: "Listen to the customer's final response.",
           quickResponses: [
             {
-              label: "Complete Lead & Hand Off",
-              actionDescription: "Lead completed successfully.",
-              guidance: "Save lead packet and set disposition: LEAD_COMPLETED.",
+              label: "Customer says YES (Section 48)",
+              actionDescription: "Customer accepts the reduction.",
+              autoFill: { customerDecision: "YES" },
+              guidance: "Say: “Perfect. Thank you for confirming. I'll now go through the next step with you and make sure everything is clear.”",
             },
             {
-              label: "Customer asks when team will call",
-              actionDescription: "Inquires about next steps.",
-              guidance: "Advise: 'The relevant team will follow up during normal office hours to go through everything with you.'",
+              label: "Customer says NO (Section 49)",
+              actionDescription: "Customer declines the reduction.",
+              autoFill: { customerDecision: "NO" },
+              guidance: "Say: “No problem at all. I respect your decision. Thank you for your time, and I'll leave it there.”",
+            },
+            {
+              label: "Customer wants to end call (Section 43)",
+              actionDescription: "Customer wishes to conclude the conversation.",
+              guidance: "Say: “Of course. I won't keep you. Thank you for your time, and I hope you have a lovely day.”",
+            },
+            {
+              label: "Remove number (Section 41/42)",
+              actionDescription: "Customer requests no further contact.",
+              category: "DO_NOT_CALL",
+              guidance: "Say: “Understood. I won't continue with the call. I'll follow the company's process for your request regarding future contact.”",
             },
           ],
-          why: "Concludes the call politely, sets clear expectations for the fulfillment team, and reinforces peace of mind.",
+          why: "Gives customer full autonomy and executes compliant conclusion.",
           nextStage: "CALL_COMPLETED" as MasterStage,
-          prevStage: "STAGE_10_FINAL_CHECK",
+          prevStage: "STAGE_8_BEFORE_AGREEMENT",
         };
     }
   }

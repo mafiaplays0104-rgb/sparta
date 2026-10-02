@@ -10,6 +10,7 @@ import {
   Percent,
   AlertCircle,
   HelpCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { ScriptUnit } from "../engine/scriptUnitEngine";
 import { CustomerRecord, OfferConfig } from "../types";
@@ -43,7 +44,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
   onUpdateCustomer,
   onNext,
   onPrevious,
-  canGoNext,
+  canGoNext: _canGoNext,
   canGoPrevious,
   onOpenDobCalculator,
   onOpenBillCalculator,
@@ -127,7 +128,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
           )}
         </div>
 
-        {/* 3. CONTEXTUAL INLINE INPUTS / QUICK BUTTONS (PROGRESSIVE DISCLOSURE) */}
+        {/* 3. CONTEXTUAL INLINE INPUTS / QUICK BUTTONS */}
         <div className="my-2 flex flex-col items-center space-y-2.5">
           {/* Bill input helper */}
           {unit.inputType === "BILL_INPUT" && (
@@ -136,7 +137,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
                 <span className="text-xs text-slate-400 font-medium">Customer states:</span>
                 <input
                   type="text"
-                  placeholder="e.g. 80.99 or £65"
+                  placeholder="e.g. 65 or £80.99"
                   value={customBillInput}
                   onChange={(e) => setCustomBillInput(e.target.value)}
                   className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-sm font-bold text-white font-mono focus:border-sparta-500 focus:outline-none"
@@ -167,7 +168,28 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
             </div>
           )}
 
-          {/* DOB input helper */}
+          {/* Consumer Identification Number helper */}
+          {unit.inputType === "CUSTOMER_ID_INPUT" && (
+            <div className="w-full max-w-md bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-sparta-400" />
+              <input
+                type="text"
+                placeholder="Enter Consumer ID from bill..."
+                value={customer.consumerId || customer.customerId || ""}
+                onChange={(e) =>
+                  onUpdateCustomer({
+                    consumerId: e.target.value.toUpperCase(),
+                    customerId: e.target.value.toUpperCase(),
+                    consumerIdStatus: "VERIFIED",
+                    customerIdStatus: "VERIFIED",
+                  })
+                }
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs font-mono font-bold text-white uppercase focus:border-sparta-500 focus:outline-none"
+              />
+            </div>
+          )}
+
+          {/* Optional DOB helper */}
           {unit.inputType === "DOB_INPUT" && (
             <div className="w-full max-w-md bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
@@ -177,34 +199,15 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
                     ? `DOB: ${customer.dob}`
                     : customer.birthYear
                     ? `Born: ${customer.birthYear} (~${customer.calculatedAge}y)`
-                    : "DOB not yet set"}
+                    : "DOB optional"}
                 </span>
               </div>
               <button
                 onClick={onOpenDobCalculator}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1 rounded-lg text-xs"
               >
-                DOB / Age Tool
+                DOB Tool
               </button>
-            </div>
-          )}
-
-          {/* Customer ID input helper */}
-          {unit.inputType === "CUSTOMER_ID_INPUT" && (
-            <div className="w-full max-w-md bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-medium font-mono">IBANGB</span>
-              <input
-                type="text"
-                placeholder="Enter customer ID..."
-                value={customer.customerId || ""}
-                onChange={(e) =>
-                  onUpdateCustomer({
-                    customerId: e.target.value.toUpperCase(),
-                    customerIdStatus: "VERIFIED",
-                  })
-                }
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs font-mono font-bold text-white uppercase focus:border-sparta-500 focus:outline-none"
-              />
             </div>
           )}
 
@@ -226,7 +229,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
           )}
         </div>
 
-        {/* 4. PRIMARY NAVIGATION BUTTONS — DIRECTLY BENEATH THE SCRIPT */}
+        {/* 4. PRIMARY NAVIGATION BUTTONS */}
         <div className="pt-4 border-t border-slate-800 flex items-center justify-between mt-2">
           <button
             onClick={onPrevious}
@@ -243,7 +246,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
             className="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-slate-800 text-xs font-medium flex items-center gap-1 transition-colors"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>Objection / Help</span>
+            <span>52 Script Sections / Help</span>
           </button>
 
           {isFinalUnit ? (

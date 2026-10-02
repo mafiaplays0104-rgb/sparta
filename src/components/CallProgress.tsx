@@ -1,6 +1,7 @@
 import React from "react";
 import { MasterStage } from "../types";
 import { STAGES_LIST, MasterScriptEngine } from "../engine/masterScriptEngine";
+import { initialOfferConfig } from "../data/initialOfferConfig";
 
 interface CallProgressProps {
   currentStage: MasterStage;
@@ -20,47 +21,19 @@ export const CallProgress: React.FC<CallProgressProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          Workflow
+          Live Call Flow
         </span>
         <span className="text-[10px] font-mono text-sparta-400 font-bold">
-          {currentIndex >= 0 ? currentIndex + 1 : 11} / 11
+          {currentIndex >= 0 ? currentIndex + 1 : STAGES_LIST.length} / {STAGES_LIST.length}
         </span>
       </div>
 
-      {/* Simplified Stages List */}
+      {/* 30% Reduction Workflow Stages List */}
       <nav aria-label="Workflow stages" className="space-y-0.5 flex-1">
         {STAGES_LIST.map((stageKey, idx) => {
           const isCurrent = stageKey === currentStage;
           const isCompleted = completedStages.has(stageKey);
-          const stageDef = MasterScriptEngine.getStageDefinition(stageKey, {}, {
-            campaignName: "",
-            enabled: true,
-            offerName: "",
-            minutes: 500,
-            crossNetwork: true,
-            anytime: true,
-            dedicatedCustomerService: true,
-            technicalVisit: true,
-            writtenTerms: true,
-            maxDiscountPercent: 30,
-            serviceUnchanged: true,
-            contractUnchanged: true,
-            equipmentUnchanged: true,
-            paymentMethod: "DIRECT_DEBIT",
-            customerIdPrefix: "IBANGB",
-            eligibilityRules: { minimumDob: "", maximumDob: "" },
-            authorisedText: {
-              companyName: "",
-              campaignReason: "",
-              dataSourceExplanation: "",
-              verificationProcedure: "",
-              privacyNotice: "",
-              closingLines: "",
-            },
-            scriptLock: true,
-            scriptVersion: "1.0.0",
-            dataRetentionDays: 90,
-          });
+          const stageDef = MasterScriptEngine.getStageDefinition(stageKey, {}, initialOfferConfig);
 
           return (
             <button
@@ -83,7 +56,7 @@ export const CallProgress: React.FC<CallProgressProps> = ({
                     : "text-slate-600"
                 }`}
               >
-                {isCompleted ? "✓" : isCurrent ? "●" : "○"}
+                {isCompleted ? "✓" : isCurrent ? `${idx + 1}` : `${idx + 1}`}
               </span>
               <span className="truncate text-[11px] leading-tight">
                 {stageDef.stageName.replace(/Stage \d+ — /, "")}
