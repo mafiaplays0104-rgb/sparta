@@ -1,7 +1,6 @@
 import React from "react";
 import {
   ShieldCheck,
-  Percent,
 } from "lucide-react";
 import { CustomerRecord, OfferConfig } from "../types";
 
@@ -10,6 +9,7 @@ interface CustomerPanelProps {
   config: OfferConfig;
   onOpenDobCalculator: () => void;
   onOpenBillCalculator: () => void;
+  onOpenIbanCalculator?: () => void;
 }
 
 export const CustomerPanel: React.FC<CustomerPanelProps> = ({
@@ -17,6 +17,7 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
   config: _config,
   onOpenDobCalculator,
   onOpenBillCalculator,
+  onOpenIbanCalculator,
 }) => {
   // Compact Checklist matching 30% reduction live flow
   const checklist = [
@@ -75,6 +76,22 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
             >
               Edit
             </button>
+          </div>
+        )}
+
+        {(customer.sortCode || customer.accountNumber) && (
+          <div className="text-[11px] text-cyan-300 pt-1 border-t border-slate-900 flex items-center justify-between">
+            <span className="font-mono truncate">
+              Bank: {customer.sortCode} / {customer.accountNumber}
+            </span>
+            {onOpenIbanCalculator && (
+              <button
+                onClick={onOpenIbanCalculator}
+                className="text-[10px] underline hover:text-cyan-200 ml-1 flex-shrink-0"
+              >
+                Edit
+              </button>
+            )}
           </div>
         )}
       </div>

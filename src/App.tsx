@@ -18,6 +18,7 @@ import { AssistantPanel } from "./components/AssistantPanel";
 import { ObjectionModal } from "./components/ObjectionModal";
 import { DobCalculatorModal } from "./components/tools/DobCalculatorModal";
 import { BillCalculatorModal } from "./components/tools/BillCalculatorModal";
+import { IbanCalculatorModal } from "./components/tools/IbanCalculatorModal";
 import { CallbackModal } from "./components/CallbackModal";
 import { EscalationModal } from "./components/EscalationModal";
 import { CallSummaryModal } from "./components/CallSummaryModal";
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
   // Modals & Drawers Visibility
   const [isDobCalcOpen, setIsDobCalcOpen] = useState(false);
   const [isBillCalcOpen, setIsBillCalcOpen] = useState(false);
+  const [isIbanCalcOpen, setIsIbanCalcOpen] = useState(false);
   const [isObjectionsOpen, setIsObjectionsOpen] = useState(false);
   const [isObjectionModalOpen, setIsObjectionModalOpen] = useState(false);
   const [isCallbackOpen, setIsCallbackOpen] = useState(false);
@@ -180,6 +182,9 @@ export const App: React.FC = () => {
       } else if (e.key === "s" || e.key === "S") {
         e.preventDefault();
         setIsBillCalcOpen((prev) => !prev);
+      } else if (e.key === "b" || e.key === "B" || e.key === "i" || e.key === "I") {
+        e.preventDefault();
+        setIsIbanCalcOpen((prev) => !prev);
       } else if (e.key === "c" || e.key === "C") {
         e.preventDefault();
         setIsCallbackOpen((prev) => !prev);
@@ -188,6 +193,7 @@ export const App: React.FC = () => {
         setIsObjectionModalOpen(false);
         setIsDobCalcOpen(false);
         setIsBillCalcOpen(false);
+        setIsIbanCalcOpen(false);
         setIsCallbackOpen(false);
         setIsEscalationOpen(false);
         setIsCallSummaryOpen(false);
@@ -211,6 +217,7 @@ export const App: React.FC = () => {
         onOpenObjections={() => setIsObjectionModalOpen(true)}
         onOpenDobCalculator={() => setIsDobCalcOpen(true)}
         onOpenBillCalculator={() => setIsBillCalcOpen(true)}
+        onOpenIbanCalculator={() => setIsIbanCalcOpen(true)}
         onOpenTestRunner={() => setIsTestRunnerOpen(true)}
       />
 
@@ -252,6 +259,7 @@ export const App: React.FC = () => {
             config={config}
             onOpenDobCalculator={() => setIsDobCalcOpen(true)}
             onOpenBillCalculator={() => setIsBillCalcOpen(true)}
+            onOpenIbanCalculator={() => setIsIbanCalcOpen(true)}
           />
         </div>
       </div>
@@ -266,7 +274,7 @@ export const App: React.FC = () => {
         </div>
 
         <div className="hidden sm:flex items-center gap-3 text-slate-500 font-mono text-[10px]">
-          <span>Shortcuts: Enter=Next • Left=Back • O=52 Script Sections • S=30% Savings • C=Callback</span>
+          <span>Shortcuts: Enter=Next • Left=Back • O=52 Script Sections • S=30% Savings • B=IBAN Tool • C=Callback</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -317,6 +325,15 @@ export const App: React.FC = () => {
         config={config}
         currentAmount={customer.monthlyBill}
         onApplyBill={(billData) => handleUpdateCustomer(billData)}
+      />
+
+      {/* UK Vocalink Modulus Checker & IBAN Calculator Modal */}
+      <IbanCalculatorModal
+        isOpen={isIbanCalcOpen}
+        onClose={() => setIsIbanCalcOpen(false)}
+        currentSortCode={customer.sortCode}
+        currentAccountNumber={customer.accountNumber}
+        onApplyBankDetails={(bankData) => handleUpdateCustomer(bankData)}
       />
 
       {/* Callback Modal */}

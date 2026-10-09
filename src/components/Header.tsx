@@ -7,6 +7,7 @@ import {
   Percent,
   FlaskConical,
   HelpCircle,
+  CreditCard,
 } from "lucide-react";
 import { OfferConfig, MasterStage } from "../types";
 
@@ -18,6 +19,7 @@ interface HeaderProps {
   onOpenObjections: () => void;
   onOpenDobCalculator: () => void;
   onOpenBillCalculator: () => void;
+  onOpenIbanCalculator: () => void;
   onOpenTestRunner: () => void;
 }
 
@@ -29,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenObjections,
   onOpenDobCalculator,
   onOpenBillCalculator,
+  onOpenIbanCalculator,
   onOpenTestRunner,
 }) => {
   return (
@@ -71,6 +74,15 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Percent className="w-3 h-3" />
             <span className="hidden sm:inline">30% Savings</span>
+          </button>
+
+          <button
+            onClick={onOpenIbanCalculator}
+            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 flex items-center gap-1"
+            title="UK Modulus Checker & IBAN Calculator [B]"
+          >
+            <CreditCard className="w-3 h-3" />
+            <span className="hidden sm:inline">IBAN Tool</span>
           </button>
 
           <button

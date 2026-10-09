@@ -9,6 +9,7 @@ import {
   Percent,
   Keyboard,
   FileCheck,
+  CreditCard,
 } from "lucide-react";
 import { MasterStage } from "../types";
 import { STAGES_LIST } from "../engine/masterScriptEngine";
@@ -21,6 +22,7 @@ interface ActionBarProps {
   onOpenCallback: () => void;
   onOpenDobCalculator: () => void;
   onOpenBillCalculator: () => void;
+  onOpenIbanCalculator: () => void;
   onEndCall: () => void;
 }
 
@@ -32,6 +34,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
   onOpenCallback,
   onOpenDobCalculator,
   onOpenBillCalculator,
+  onOpenIbanCalculator,
   onEndCall,
 }) => {
   const currentIndex = STAGES_LIST.indexOf(currentStage);
@@ -85,7 +88,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canGoBack, onPrevious, onNext, onOpenObjections, onOpenCallback, onOpenDobCalculator, onOpenBillCalculator, onEndCall]);
+  }, [canGoBack, onPrevious, onNext, onOpenObjections, onOpenCallback, onOpenDobCalculator, onOpenBillCalculator, onOpenIbanCalculator, onEndCall]);
 
   return (
     <nav aria-label="Call controls" className="bg-slate-900 border-t border-slate-800 px-4 py-2.5 text-xs text-slate-300">
@@ -128,12 +131,21 @@ export const ActionBar: React.FC<ActionBarProps> = ({
             <Percent className="w-3.5 h-3.5" />
             <span>[6] 30% Savings</span>
           </button>
+
+          <button
+            onClick={onOpenIbanCalculator}
+            className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium flex items-center gap-1"
+            title="Shortkey [B]"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>[B] IBAN Tool</span>
+          </button>
         </div>
 
         {/* Center: Keyboard hint */}
         <div className="hidden lg:flex items-center gap-1 text-[11px] text-slate-500 font-mono">
           <Keyboard className="w-3 h-3 text-slate-400" />
-          <span>Shortcuts: 1=Back, 4=Objections, 5=DOB, 6=Savings, 7=Next, 8=Callback, 9=End</span>
+          <span>Shortcuts: 1=Back, 4=Objections, 5=DOB, 6=Savings, B=IBAN, 7=Next, 8=Callback, 9=End</span>
         </div>
 
         {/* Right: Progress & End */}

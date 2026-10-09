@@ -92,6 +92,10 @@ export interface CustomerRecord {
   billIncludesTv?: boolean;
   issuesRecently?: string;
   personalDetailsConfirmed?: boolean;
+  sortCode?: string;
+  accountNumber?: string;
+  bankName?: string;
+  iban?: string;
 }
 
 export interface OfferConfig {
