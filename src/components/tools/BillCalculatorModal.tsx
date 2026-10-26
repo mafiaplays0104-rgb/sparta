@@ -19,6 +19,7 @@ interface BillCalculatorModalProps {
   config: OfferConfig;
   currentAmount?: number;
   onApplyBill: (billData: { monthlyBill: number; billApproximate: boolean }) => void;
+  onSwitchToVatCalculator?: () => void;
 }
 
 export const BillCalculatorModal: React.FC<BillCalculatorModalProps> = ({
@@ -27,6 +28,7 @@ export const BillCalculatorModal: React.FC<BillCalculatorModalProps> = ({
   config,
   currentAmount,
   onApplyBill,
+  onSwitchToVatCalculator,
 }) => {
   const [inputText, setInputText] = useState<string>(
     currentAmount ? currentAmount.toFixed(2) : "80 pounds 99 pence"
@@ -211,6 +213,18 @@ export const BillCalculatorModal: React.FC<BillCalculatorModalProps> = ({
                   "{calculation.speechSnippet}"
                 </p>
               </div>
+
+              {/* Switch to VAT Calculator Link */}
+              {onSwitchToVatCalculator && (
+                <div className="text-center pt-1">
+                  <button
+                    onClick={onSwitchToVatCalculator}
+                    className="text-[11px] text-slate-400 hover:text-teal-400 underline font-medium"
+                  >
+                    Need 20% VAT calculations? Switch to separate 20% VAT Calculator
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center text-slate-400">

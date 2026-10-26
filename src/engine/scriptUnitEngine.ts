@@ -1,5 +1,5 @@
 import { MasterStage, CustomerRecord, OfferConfig } from "../types";
-import { STAGES_LIST, MasterScriptEngine } from "./masterScriptEngine";
+import { MasterScriptEngine } from "./masterScriptEngine";
 
 export interface ScriptUnit {
   id: string;
@@ -9,9 +9,19 @@ export interface ScriptUnit {
   unitIndex: number;
   totalUnitsInStage: number;
   getText: (customer: CustomerRecord, config: OfferConfig) => string;
+  expectedCustomerReply?: string;
   subNote?: string;
   isPauseAndListen: boolean;
-  inputType?: "NONE" | "BILL_INPUT" | "DOB_INPUT" | "CUSTOMER_ID_INPUT" | "MOBILE_INPUT" | "ALARM_SELECT" | "TV_INPUT" | "CHOICE";
+  inputType?:
+    | "NONE"
+    | "BILL_INPUT"
+    | "VAT_CALCULATOR"
+    | "DOB_INPUT"
+    | "CUSTOMER_ID_INPUT"
+    | "MOBILE_INPUT"
+    | "ALARM_SELECT"
+    | "TV_INPUT"
+    | "CHOICE";
   quickOptions?: {
     label: string;
     action: (customer: CustomerRecord, onUpdate: (u: Partial<CustomerRecord>) => void) => void;
@@ -20,358 +30,247 @@ export interface ScriptUnit {
 
 export class ScriptUnitEngine {
   /**
-   * Generates all calibrated units across the 9 Live Call Flow stages of the 30% Bill Reduction Script
+   * Generates all units across the 5 Phases of the UK Digital Fiber Landline Upgrade Script
    */
-  public static getAllUnits(customer: CustomerRecord, config: OfferConfig): ScriptUnit[] {
-    const advisorName = config.advisorName || "Peter";
-    const companyName = config.companyName || "[COMPANY NAME]";
+  public static getAllUnits(customer: CustomerRecord, _config: OfferConfig): ScriptUnit[] {
+    const customerName =
+      MasterScriptEngine.getCustomerDisplayName(customer) || "[Customer Name]";
 
     const units: ScriptUnit[] = [
       // ==========================================
-      // STAGE 1 — OPENING (Section 1)
+      // PHASE 1 — INTRODUCTION & RAPPORT BUILDING
       // ==========================================
       {
-        id: "s1_u1",
-        stage: "STAGE_1_OPENING",
+        id: "p1_u1",
+        stage: "PHASE_1_INTRODUCTION",
         stageNumber: 1,
-        stageName: "Opening",
+        stageName: "Introduction & Rapport Building",
         unitIndex: 1,
-        totalUnitsInStage: 3,
-        getText: () => `“Hi, my name is ${advisorName}, and I'm calling regarding your telephone service. There's been a reduction of up to 30% on your monthly bill.”`,
+        totalUnitsInStage: 2,
+        getText: () => `“Hello, good afternoon! Am I speaking with ${customerName}?”`,
+        expectedCustomerReply: "Yes.",
         isPauseAndListen: true,
         quickOptions: [
           {
-            label: "✓ Customer Listens / Says Yes",
+            label: "✓ Customer: “Yes” (Confirmed Name)",
+            action: (_c, onUpdate) => onUpdate({ personalDetailsConfirmed: true }),
+          },
+          {
+            label: "“Who is calling please?”",
             action: () => {},
           },
           {
-            label: "“What is this about?”",
-            action: () => {},
-          },
-          {
-            label: "“Who are you calling from?”",
+            label: "“What is this regarding?”",
             action: () => {},
           },
         ],
       },
       {
-        id: "s1_u2",
-        stage: "STAGE_1_OPENING",
+        id: "p1_u2",
+        stage: "PHASE_1_INTRODUCTION",
         stageNumber: 1,
-        stageName: "Opening",
+        stageName: "Introduction & Rapport Building",
         unitIndex: 2,
-        totalUnitsInStage: 3,
-        getText: () => `“I'm just calling to let you know about the reduction and check if it applies to your current service.”`,
-        isPauseAndListen: false,
-      },
-      {
-        id: "s1_u3",
-        stage: "STAGE_1_OPENING",
-        stageNumber: 1,
-        stageName: "Opening",
-        unitIndex: 3,
-        totalUnitsInStage: 3,
-        getText: () => `“It will only take a couple of minutes. I'll check a few details and explain the saving clearly to you.”`,
+        totalUnitsInStage: 2,
+        getText: () =>
+          `“I hope you're having a lovely day. I am calling regarding your existing landline service.”`,
         isPauseAndListen: true,
         quickOptions: [
           {
-            label: "✓ Yes / Continues (Sec 1)",
+            label: "✓ Proceed to Digital Transition",
             action: () => {},
           },
           {
-            label: "“I'm not interested” (Sec 3)",
-            action: () => {},
-          },
-          {
-            label: "“I'm busy” (Sec 4)",
+            label: "“Is there a problem with my line?”",
             action: () => {},
           },
         ],
       },
 
       // ==========================================
-      // STAGE 2 — CONSUMER IDENTIFICATION NUMBER (Section 7)
+      // PHASE 2 — IDENTIFYING THE TRANSITION & HOOK
       // ==========================================
       {
-        id: "s2_u1",
-        stage: "STAGE_2_VERIFICATION_ID",
+        id: "p2_u1",
+        stage: "PHASE_2_TRANSITION_HOOK",
         stageNumber: 2,
-        stageName: "Consumer Identification Number",
+        stageName: "Identifying the Transition & Hook",
         unitIndex: 1,
-        totalUnitsInStage: 1,
-        getText: () => `“Before I continue, I just need to verify the account. Could you please give me your Consumer Identification Number?”`,
+        totalUnitsInStage: 2,
+        getText: () =>
+          `“As you may know, the old copper wires your landline currently runs on are being retired, and we are upgrading lines to the new fiber digital network. In order to keep your landline active and working, we will be upgrading it to the new network.”`,
+        expectedCustomerReply:
+          "Oh right, I was wondering what was happening / My husband usually deals with that side of things.",
         isPauseAndListen: true,
-        inputType: "CUSTOMER_ID_INPUT",
-        subNote: "If customer asks why: “It's simply to verify the correct account and make sure I'm looking at the right service details. I don't want to give you information for the wrong account.”",
         quickOptions: [
           {
-            label: "✓ ID Verified",
-            action: (_c, onUpdate) => onUpdate({ consumerIdStatus: "VERIFIED", customerIdStatus: "VERIFIED" }),
+            label: "✓ “Oh right, I was wondering what was happening”",
+            action: () => {},
           },
           {
-            label: "Doesn't know where to find it (Sec 7)",
-            action: (_c, onUpdate) => onUpdate({ consumerIdUnavailable: true, consumerIdStatus: "NOT_AVAILABLE" }),
+            label: "“My husband / partner deals with that”",
+            action: () => {},
           },
           {
-            label: "Customer Refuses ID (Sec 7)",
-            action: (_c, onUpdate) => onUpdate({ consumerIdRefused: true, consumerIdStatus: "REFUSED" }),
+            label: "“Is my landline being disconnected?”",
+            action: () => {},
           },
         ],
       },
-
-      // ==========================================
-      // STAGE 3 — VERIFICATION COMPLETED (Section 8)
-      // ==========================================
       {
-        id: "s3_u1",
-        stage: "STAGE_3_VERIFICATION_COMPLETED",
-        stageNumber: 3,
-        stageName: "Verification Completed",
-        unitIndex: 1,
-        totalUnitsInStage: 2,
-        getText: () => `“Thank you. That's all I needed for the account verification.”`,
-        isPauseAndListen: false,
-      },
-      {
-        id: "s3_u2",
-        stage: "STAGE_3_VERIFICATION_COMPLETED",
-        stageNumber: 3,
-        stageName: "Verification Completed",
+        id: "p2_u2",
+        stage: "PHASE_2_TRANSITION_HOOK",
+        stageNumber: 2,
+        stageName: "Identifying the Transition & Hook",
         unitIndex: 2,
         totalUnitsInStage: 2,
-        getText: () => `“I'll now check a few basic details about your current service so I can explain the reduction correctly.”`,
+        getText: () =>
+          `“No problem at all, I'm here to assist you step-by-step. The great news is your landline number and phone will remain exactly the same. The only difference is that your call quality and reception will be much better since it will operate via the internet.”`,
+        subNote:
+          "Reassure: Handset & number remain 100% identical. The line operates via high-speed digital fiber.",
         isPauseAndListen: true,
         quickOptions: [
           {
-            label: "✓ Proceed to service check",
+            label: "✓ Customer acknowledges & continues",
             action: () => {},
           },
           {
-            label: "Customer has a question (Sec 47)",
+            label: "“Do I keep my exact same number?” (Yes, 100% same)",
             action: () => {},
           },
         ],
       },
 
       // ==========================================
-      // STAGE 4 — CURRENT SERVICE (Section 9)
+      // PHASE 3 — PRESENTING THE BUNDLE & PRICE GUARANTEE
       // ==========================================
       {
-        id: "s4_u1",
-        stage: "STAGE_4_CURRENT_SERVICE",
+        id: "p3_u1",
+        stage: "PHASE_3_BUNDLE_PRICE_GUARANTEE",
+        stageNumber: 3,
+        stageName: "Presenting the Bundle & Price Guarantee",
+        unitIndex: 1,
+        totalUnitsInStage: 2,
+        getText: () =>
+          `“As a privileged customer, we are bundling your landline upgrade with high-speed fiber broadband and unlimited calls to any local, national UK landline and mobile numbers.”`,
+        expectedCustomerReply: "How much is that going to cost?",
+        isPauseAndListen: true,
+        quickOptions: [
+          {
+            label: "✓ Customer asks: “How much is that going to cost?”",
+            action: () => {},
+          },
+          {
+            label: "“Are mobile calls included?” (Yes, unlimited UK mobiles & landlines)",
+            action: () => {},
+          },
+        ],
+      },
+      {
+        id: "p3_u2",
+        stage: "PHASE_3_BUNDLE_PRICE_GUARANTEE",
+        stageNumber: 3,
+        stageName: "Presenting the Bundle & Price Guarantee",
+        unitIndex: 2,
+        totalUnitsInStage: 2,
+        getText: () =>
+          `“The total price for your digital landline and broadband services will be only £42.99 per month plus VAT (making it £51.58 total), and it comes with a price promise guarantee locked in for the next two years so your bill will not fluctuate or go up.”`,
+        subNote:
+          "Tariff: £42.99/mo + 20% VAT (£8.59) = £51.58/mo total. Price locked for 2 years with zero price fluctuations.",
+        isPauseAndListen: true,
+        inputType: "VAT_CALCULATOR",
+        quickOptions: [
+          {
+            label: "✓ Customer accepts: £51.58 total (Locked 2 Years)",
+            action: (_c, onUpdate) =>
+              onUpdate({ monthlyBill: 51.58, billApproximate: false, termsUnderstood: true }),
+          },
+          {
+            label: "“Does that include VAT?” (Yes, £51.58 total inc. 20% VAT)",
+            action: () => {},
+          },
+          {
+            label: "“Will the bill increase after 1 year?” (No, 2-year lock)",
+            action: () => {},
+          },
+        ],
+      },
+
+      // ==========================================
+      // PHASE 4 — HARDWARE & INSTALLATION DETAILS
+      // ==========================================
+      {
+        id: "p4_u1",
+        stage: "PHASE_4_HARDWARE_INSTALLATION",
         stageNumber: 4,
-        stageName: "Current Service",
+        stageName: "Hardware & Installation Details",
         unitIndex: 1,
-        totalUnitsInStage: 1,
-        getText: () => `“Can I just confirm, are you currently using this telephone service at your home?”`,
+        totalUnitsInStage: 2,
+        getText: () =>
+          `“We will also send you a digital router by post. While these normally cost £100 to £120 in the market, as an upgrade customer it is only a one-time £30 charge automatically adjusted on your bills. Furthermore, a certified engineer's visit and installation charges will be completely free.”`,
+        expectedCustomerReply: "Do I have to install the equipment myself?",
         isPauseAndListen: true,
         quickOptions: [
           {
-            label: "✓ YES — Using at home",
-            action: (_c, onUpdate) => onUpdate({ isUsingAtHome: "YES" }),
+            label: "✓ Customer asks: “Do I have to install it myself?”",
+            action: () => {},
           },
           {
-            label: "NO — Not at home",
-            action: (_c, onUpdate) => onUpdate({ isUsingAtHome: "NO" }),
+            label: "“When is the £30 billed?” (Automatically adjusted on bill)",
+            action: () => {},
+          },
+        ],
+      },
+      {
+        id: "p4_u2",
+        stage: "PHASE_4_HARDWARE_INSTALLATION",
+        stageNumber: 4,
+        stageName: "Hardware & Installation Details",
+        unitIndex: 2,
+        totalUnitsInStage: 2,
+        getText: () =>
+          `“Not at all! You just keep the router package when it arrives, and our engineers will visit your property to handle the entire setup on your behalf.”`,
+        subNote:
+          "Engineer setup is 100% free. Customer merely receives the postal package; the certified engineer completes everything.",
+        isPauseAndListen: true,
+        quickOptions: [
+          {
+            label: "✓ Customer relieved / agrees to engineer setup",
+            action: () => {},
           },
           {
-            label: "DON'T KNOW / Unsure",
-            action: (_c, onUpdate) => onUpdate({ isUsingAtHome: "DONT_KNOW" }),
+            label: "“When will the engineer visit?”",
+            action: () => {},
           },
         ],
       },
 
       // ==========================================
-      // STAGE 5 — CURRENT MONTHLY BILL (Section 10)
+      // PHASE 5 — VERIFICATION & CLOSING
       // ==========================================
       {
-        id: "s5_u1",
-        stage: "STAGE_5_CURRENT_BILL",
+        id: "p5_u1",
+        stage: "PHASE_5_VERIFICATION_CLOSING",
         stageNumber: 5,
-        stageName: "Current Monthly Bill",
+        stageName: "Verification & Closing",
         unitIndex: 1,
         totalUnitsInStage: 1,
-        getText: () => `“Could you tell me roughly how much you're currently paying each month for your telephone service?”`,
-        isPauseAndListen: true,
-        inputType: "BILL_INPUT",
-        quickOptions: [
-          {
-            label: "£50 approx",
-            action: (_c, onUpdate) => onUpdate({ monthlyBill: 50, billApproximate: true }),
-          },
-          {
-            label: "£65 approx",
-            action: (_c, onUpdate) => onUpdate({ monthlyBill: 65, billApproximate: true }),
-          },
-          {
-            label: "£80.99 approx",
-            action: (_c, onUpdate) => onUpdate({ monthlyBill: 80.99, billApproximate: true }),
-          },
-          {
-            label: "Doesn't know (Sec 10)",
-            action: () => {},
-          },
-          {
-            label: "“Already cheap” (Sec 17)",
-            action: () => {},
-          },
-        ],
-      },
-
-      // ==========================================
-      // STAGE 6 — EXPLAINING THE REDUCTION (Section 11)
-      // ==========================================
-      {
-        id: "s6_u1",
-        stage: "STAGE_6_EXPLAINING_REDUCTION",
-        stageNumber: 6,
-        stageName: "Explaining The Reduction",
-        unitIndex: 1,
-        totalUnitsInStage: 2,
-        getText: () => `“Based on the information you've given me, the available reduction could lower your monthly telephone cost.”`,
-        isPauseAndListen: false,
-      },
-      {
-        id: "s6_u2",
-        stage: "STAGE_6_EXPLAINING_REDUCTION",
-        stageNumber: 6,
-        stageName: "Explaining The Reduction",
-        unitIndex: 2,
-        totalUnitsInStage: 2,
-        getText: () => `“The exact amount depends on your current service and the details we've just checked.”`,
-        isPauseAndListen: true,
-        subNote: "If customer asks “How much exactly?”: “I'll confirm the exact figure once the remaining details have been checked. I don't want to give you an incorrect amount before everything is verified.”",
-        quickOptions: [
-          {
-            label: "✓ Customer is interested (Sec 12)",
-            action: () => {},
-          },
-          {
-            label: "“How much will I save?” (Sec 5)",
-            action: () => {},
-          },
-          {
-            label: "“Is this a new contract?” (Sec 6)",
-            action: () => {},
-          },
-          {
-            label: "Customer is confused (Sec 13)",
-            action: () => {},
-          },
-        ],
-      },
-
-      // ==========================================
-      // STAGE 7 — FINAL CONFIRMATION (Section 45)
-      // ==========================================
-      {
-        id: "s7_u1",
-        stage: "STAGE_7_FINAL_CONFIRMATION",
-        stageNumber: 7,
-        stageName: "Final Confirmation",
-        unitIndex: 1,
-        totalUnitsInStage: 2,
-        getText: () => `“Thank you for going through those details with me.”`,
-        isPauseAndListen: false,
-      },
-      {
-        id: "s7_u2",
-        stage: "STAGE_7_FINAL_CONFIRMATION",
-        stageNumber: 7,
-        stageName: "Final Confirmation",
-        unitIndex: 2,
-        totalUnitsInStage: 2,
-        getText: () => `“I'll now explain the available reduction and any important terms before you decide whether you want to continue.”`,
+        getText: () =>
+          `“To finalize everything, I will quickly connect you to our senior verification officer who will take just a minute to confirm your new package price and address before sending out your official confirmation letter and router. Please hold the line for a moment.”`,
+        expectedCustomerReply: "Alright, thank you.",
         isPauseAndListen: true,
         quickOptions: [
           {
-            label: "✓ Customer Agrees to Continue (Sec 44)",
-            action: (_c, onUpdate) => onUpdate({ finalConfirmationGiven: true }),
+            label: "✓ Customer: “Alright, thank you.” (Transfer Ready)",
+            action: (_c, onUpdate) =>
+              onUpdate({ customerDecision: "YES", finalConfirmationGiven: true }),
           },
           {
-            label: "“I want to think about it” (Sec 30)",
+            label: "“How long will this take?” (Just 1 minute to confirm)",
             action: () => {},
           },
           {
-            label: "“Speak to my family” (Sec 31)",
-            action: () => {},
-          },
-          {
-            label: "“Just send me something” (Sec 37)",
-            action: () => {},
-          },
-        ],
-      },
-
-      // ==========================================
-      // STAGE 8 — BEFORE ANY AGREEMENT (Section 46)
-      // ==========================================
-      {
-        id: "s8_u1",
-        stage: "STAGE_8_BEFORE_AGREEMENT",
-        stageNumber: 8,
-        stageName: "Before Any Agreement",
-        unitIndex: 1,
-        totalUnitsInStage: 2,
-        getText: () => `“Before we go any further, I'll make sure you understand the price, service, and any relevant terms.”`,
-        isPauseAndListen: false,
-      },
-      {
-        id: "s8_u2",
-        stage: "STAGE_8_BEFORE_AGREEMENT",
-        stageNumber: 8,
-        stageName: "Before Any Agreement",
-        unitIndex: 2,
-        totalUnitsInStage: 2,
-        getText: () => `“If anything is unclear, please ask me and I'll explain it.”`,
-        isPauseAndListen: true,
-        quickOptions: [
-          {
-            label: "✓ Everything Clear / Understood",
-            action: (_c, onUpdate) => onUpdate({ termsUnderstood: true }),
-          },
-          {
-            label: "Customer has a question (Sec 47)",
-            action: () => {},
-          },
-          {
-            label: "“I'm not sure” (Sec 50)",
-            action: () => {},
-          },
-          {
-            label: "Asks you to repeat (Sec 51)",
-            action: () => {},
-          },
-        ],
-      },
-
-      // ==========================================
-      // STAGE 9 — CUSTOMER DECISION (Sections 48, 49)
-      // ==========================================
-      {
-        id: "s9_u1",
-        stage: "STAGE_9_CUSTOMER_DECISION",
-        stageNumber: 9,
-        stageName: "Customer Decision",
-        unitIndex: 1,
-        totalUnitsInStage: 1,
-        getText: () => `“Would you like to proceed with the 30% reduction on your telephone service?”`,
-        isPauseAndListen: true,
-        quickOptions: [
-          {
-            label: "✓ YES — Proceed (Sec 48)",
-            action: (_c, onUpdate) => onUpdate({ customerDecision: "YES" }),
-          },
-          {
-            label: "✕ NO — Decline (Sec 49)",
-            action: (_c, onUpdate) => onUpdate({ customerDecision: "NO" }),
-          },
-          {
-            label: "End Call (Sec 43)",
-            action: () => {},
-          },
-          {
-            label: "Remove Number (Sec 41)",
+            label: "“When does the letter arrive?”",
             action: () => {},
           },
         ],

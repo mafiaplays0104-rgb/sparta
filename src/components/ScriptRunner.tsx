@@ -11,6 +11,7 @@ import {
   AlertCircle,
   HelpCircle,
   ShieldCheck,
+  Receipt,
 } from "lucide-react";
 import { ScriptUnit } from "../engine/scriptUnitEngine";
 import { CustomerRecord, OfferConfig } from "../types";
@@ -29,6 +30,7 @@ interface ScriptRunnerProps {
   canGoPrevious: boolean;
   onOpenDobCalculator: () => void;
   onOpenBillCalculator: () => void;
+  onOpenVatCalculator?: () => void;
   onOpenObjections: () => void;
   onEndCall: (reason?: string) => void;
   overrideSayText?: string;
@@ -48,6 +50,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
   canGoPrevious,
   onOpenDobCalculator,
   onOpenBillCalculator,
+  onOpenVatCalculator,
   onOpenObjections,
   onEndCall,
   overrideSayText,
@@ -112,6 +115,18 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
             {sayText}
           </h2>
 
+          {/* Expected Customer Reply Banner from Script */}
+          {unit.expectedCustomerReply && (
+            <div className="mt-4 px-4 py-2.5 rounded-2xl bg-slate-950/90 border border-amber-500/30 max-w-xl text-left flex items-start gap-2.5 shadow-sm">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 flex-shrink-0 mt-0.5 font-mono">
+                Customer Reply
+              </span>
+              <p className="text-xs sm:text-sm text-slate-200 italic font-sans leading-relaxed">
+                "{unit.expectedCustomerReply}"
+              </p>
+            </div>
+          )}
+
           {/* Subnote if applicable */}
           {unit.subNote && (
             <p className="mt-3 text-xs text-slate-400 italic max-w-xl">
@@ -130,6 +145,37 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
 
         {/* 3. CONTEXTUAL INLINE INPUTS / QUICK BUTTONS */}
         <div className="my-2 flex flex-col items-center space-y-2.5">
+          {/* VAT Calculator inline helper for pricing stage */}
+          {unit.inputType === "VAT_CALCULATOR" && (
+            <div className="w-full max-w-lg bg-slate-950/90 p-3.5 rounded-2xl border border-teal-500/30 flex flex-col gap-2.5 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-teal-400" />
+                  <span className="text-xs font-bold text-slate-200">
+                    Price Guarantee: £42.99 + 20% VAT = <span className="text-emerald-400 font-mono">£51.58/mo</span>
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-800">
+                  2-YEAR PRICE LOCK
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <span className="text-[11px] text-slate-400">
+                  Net: £42.99 • VAT (20%): £8.59 • Total: £51.58
+                </span>
+                {onOpenVatCalculator && (
+                  <button
+                    onClick={onOpenVatCalculator}
+                    className="px-3 py-1 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>Open 20% VAT Calculator [V]</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Bill input helper */}
           {unit.inputType === "BILL_INPUT" && (
             <div className="w-full max-w-md bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex flex-col items-center gap-2">

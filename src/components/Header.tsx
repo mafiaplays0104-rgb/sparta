@@ -8,6 +8,7 @@ import {
   FlaskConical,
   HelpCircle,
   CreditCard,
+  Receipt,
 } from "lucide-react";
 import { OfferConfig, MasterStage } from "../types";
 
@@ -19,6 +20,7 @@ interface HeaderProps {
   onOpenObjections: () => void;
   onOpenDobCalculator: () => void;
   onOpenBillCalculator: () => void;
+  onOpenVatCalculator: () => void;
   onOpenIbanCalculator: () => void;
   onOpenTestRunner: () => void;
 }
@@ -31,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenObjections,
   onOpenDobCalculator,
   onOpenBillCalculator,
+  onOpenVatCalculator,
   onOpenIbanCalculator,
   onOpenTestRunner,
 }) => {
@@ -74,6 +77,15 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Percent className="w-3 h-3" />
             <span className="hidden sm:inline">30% Savings</span>
+          </button>
+
+          <button
+            onClick={onOpenVatCalculator}
+            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-500/15 text-teal-300 border border-teal-500/30 hover:bg-teal-500/25 flex items-center gap-1 shadow-sm"
+            title="UK 20% VAT Calculator [V]"
+          >
+            <Receipt className="w-3 h-3" />
+            <span className="hidden sm:inline">20% VAT</span>
           </button>
 
           <button

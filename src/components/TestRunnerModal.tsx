@@ -44,6 +44,106 @@ export const TestRunnerModal: React.FC<TestRunnerModalProps> = ({
 
   const testCases: TestCase[] = [
     {
+      id: "test_phase_1_intro",
+      name: "Phase 1: Introduction & Rapport Building",
+      category: "5_PHASE_SCRIPT",
+      description: "Verifies Phase 1 asks for Customer Name and states call regarding existing landline service.",
+      run: () => {
+        const def = MasterScriptEngine.getStageDefinition("PHASE_1_INTRODUCTION", { firstName: "John", lastName: "Smith" }, config);
+        const text = def.getSayText({ firstName: "John", lastName: "Smith" }, config);
+        const pass = text.includes("Am I speaking with") && text.includes("existing landline service");
+        return {
+          pass,
+          actual: text.slice(0, 85) + "...",
+          expected: "“Hello, good afternoon! Am I speaking with [Customer Name]?... calling regarding your existing landline service.”",
+        };
+      },
+    },
+    {
+      id: "test_phase_2_copper_hook",
+      name: "Phase 2: Transition Hook & Copper Retirement",
+      category: "5_PHASE_SCRIPT",
+      description: "Verifies Phase 2 explains copper retirement and reassures landline number stays same.",
+      run: () => {
+        const def = MasterScriptEngine.getStageDefinition("PHASE_2_TRANSITION_HOOK", {}, config);
+        const text = def.getSayText({}, config);
+        const pass = text.includes("old copper wires") && text.includes("fiber digital network") && text.includes("number and phone will remain exactly the same");
+        return {
+          pass,
+          actual: text.slice(0, 90) + "...",
+          expected: "“old copper wires... retired... upgrading lines to the new fiber digital network... phone will remain exactly the same.”",
+        };
+      },
+    },
+    {
+      id: "test_phase_3_bundle_pricing",
+      name: "Phase 3: Bundle & Price Guarantee (£42.99 + VAT = £51.58)",
+      category: "5_PHASE_SCRIPT",
+      description: "Verifies Phase 3 quotes £42.99 plus VAT (£51.58 total) and 2-year locked guarantee.",
+      run: () => {
+        const def = MasterScriptEngine.getStageDefinition("PHASE_3_BUNDLE_PRICE_GUARANTEE", {}, config);
+        const text = def.getSayText({}, config);
+        const pass = text.includes("£42.99 per month plus VAT") && text.includes("£51.58 total") && text.includes("two years");
+        return {
+          pass,
+          actual: text.slice(0, 95) + "...",
+          expected: "“£42.99 per month plus VAT (making it £51.58 total)... price promise guarantee locked in for the next two years”",
+        };
+      },
+    },
+    {
+      id: "test_phase_4_router_engineer",
+      name: "Phase 4: Hardware & Installation Details (£30 Router + Free Setup)",
+      category: "5_PHASE_SCRIPT",
+      description: "Verifies Phase 4 quotes one-time £30 router charge and free engineer setup.",
+      run: () => {
+        const def = MasterScriptEngine.getStageDefinition("PHASE_4_HARDWARE_INSTALLATION", {}, config);
+        const text = def.getSayText({}, config);
+        const pass = text.includes("one-time £30 charge") && text.includes("certified engineer's visit and installation charges will be completely free");
+        return {
+          pass,
+          actual: text.slice(0, 90) + "...",
+          expected: "“one-time £30 charge... certified engineer's visit and installation charges will be completely free”",
+        };
+      },
+    },
+    {
+      id: "test_phase_5_verification",
+      name: "Phase 5: Verification & Closing",
+      category: "5_PHASE_SCRIPT",
+      description: "Verifies Phase 5 connects to senior verification officer.",
+      run: () => {
+        const def = MasterScriptEngine.getStageDefinition("PHASE_5_VERIFICATION_CLOSING", {}, config);
+        const text = def.getSayText({}, config);
+        const pass = text.includes("senior verification officer") && text.includes("confirm your new package price and address");
+        return {
+          pass,
+          actual: text.slice(0, 90) + "...",
+          expected: "“connect you to our senior verification officer who will take just a minute to confirm your new package price and address”",
+        };
+      },
+    },
+    {
+      id: "test_vat_calculator_20pct",
+      name: "20% VAT Calculator: £42.99 -> £51.58 Total",
+      category: "CALCULATOR_TOOLS",
+      description: "Verifies CalculatorTools.calculateVat computes £42.99 net, £8.59 VAT, £51.58 gross.",
+      run: () => {
+        const vat = CalculatorTools.calculateVat(42.99, 20, 30);
+        const pass =
+          vat !== null &&
+          vat.netAmount === 42.99 &&
+          vat.grossAmount === 51.58 &&
+          vat.vatAmount === 8.59 &&
+          vat.firstBillWithRouter === 81.58;
+        return {
+          pass,
+          actual: vat ? `Net: ${vat.formattedNet}, VAT: ${vat.formattedVat}, Total: ${vat.formattedGross}, Router 1st Mo: ${vat.formattedFirstBillWithRouter}` : "null",
+          expected: "Net: £42.99, VAT: £8.59, Total: £51.58, Router 1st Mo: £81.58",
+        };
+      },
+    },
+    {
       id: "test_stage_1_opening",
       name: "Stage 1 Opening Script Verbatim Line",
       category: "MASTER_SCRIPT",

@@ -21,14 +21,14 @@ export const CallProgress: React.FC<CallProgressProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          Live Call Flow
+          5 Script Phases
         </span>
         <span className="text-[10px] font-mono text-sparta-400 font-bold">
           {currentIndex >= 0 ? currentIndex + 1 : STAGES_LIST.length} / {STAGES_LIST.length}
         </span>
       </div>
 
-      {/* 30% Reduction Workflow Stages List */}
+      {/* 5 Phases Workflow List */}
       <nav aria-label="Workflow stages" className="space-y-0.5 flex-1">
         {STAGES_LIST.map((stageKey, idx) => {
           const isCurrent = stageKey === currentStage;
@@ -59,7 +59,7 @@ export const CallProgress: React.FC<CallProgressProps> = ({
                 {isCompleted ? "✓" : isCurrent ? `${idx + 1}` : `${idx + 1}`}
               </span>
               <span className="truncate text-[11px] leading-tight">
-                {stageDef.stageName.replace(/Stage \d+ — /, "")}
+                {stageDef.stageName.replace(/Phase \d+:\s*/, "").replace(/Stage \d+ — /, "")}
               </span>
             </button>
           );

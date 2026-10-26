@@ -18,6 +18,7 @@ import { AssistantPanel } from "./components/AssistantPanel";
 import { ObjectionModal } from "./components/ObjectionModal";
 import { DobCalculatorModal } from "./components/tools/DobCalculatorModal";
 import { BillCalculatorModal } from "./components/tools/BillCalculatorModal";
+import { VatCalculatorModal } from "./components/tools/VatCalculatorModal";
 import { IbanCalculatorModal } from "./components/tools/IbanCalculatorModal";
 import { CallbackModal } from "./components/CallbackModal";
 import { EscalationModal } from "./components/EscalationModal";
@@ -54,6 +55,7 @@ export const App: React.FC = () => {
   // Modals & Drawers Visibility
   const [isDobCalcOpen, setIsDobCalcOpen] = useState(false);
   const [isBillCalcOpen, setIsBillCalcOpen] = useState(false);
+  const [isVatCalcOpen, setIsVatCalcOpen] = useState(false);
   const [isIbanCalcOpen, setIsIbanCalcOpen] = useState(false);
   const [isObjectionsOpen, setIsObjectionsOpen] = useState(false);
   const [isObjectionModalOpen, setIsObjectionModalOpen] = useState(false);
@@ -182,6 +184,9 @@ export const App: React.FC = () => {
       } else if (e.key === "s" || e.key === "S") {
         e.preventDefault();
         setIsBillCalcOpen((prev) => !prev);
+      } else if (e.key === "v" || e.key === "V") {
+        e.preventDefault();
+        setIsVatCalcOpen((prev) => !prev);
       } else if (e.key === "b" || e.key === "B" || e.key === "i" || e.key === "I") {
         e.preventDefault();
         setIsIbanCalcOpen((prev) => !prev);
@@ -193,6 +198,7 @@ export const App: React.FC = () => {
         setIsObjectionModalOpen(false);
         setIsDobCalcOpen(false);
         setIsBillCalcOpen(false);
+        setIsVatCalcOpen(false);
         setIsIbanCalcOpen(false);
         setIsCallbackOpen(false);
         setIsEscalationOpen(false);
@@ -217,6 +223,7 @@ export const App: React.FC = () => {
         onOpenObjections={() => setIsObjectionModalOpen(true)}
         onOpenDobCalculator={() => setIsDobCalcOpen(true)}
         onOpenBillCalculator={() => setIsBillCalcOpen(true)}
+        onOpenVatCalculator={() => setIsVatCalcOpen(true)}
         onOpenIbanCalculator={() => setIsIbanCalcOpen(true)}
         onOpenTestRunner={() => setIsTestRunnerOpen(true)}
       />
@@ -246,6 +253,7 @@ export const App: React.FC = () => {
           canGoPrevious={currentUnitIndex > 0}
           onOpenDobCalculator={() => setIsDobCalcOpen(true)}
           onOpenBillCalculator={() => setIsBillCalcOpen(true)}
+          onOpenVatCalculator={() => setIsVatCalcOpen(true)}
           onOpenObjections={() => setIsObjectionModalOpen(true)}
           onEndCall={handleEndCall}
           overrideSayText={overrideSayText}
@@ -259,6 +267,7 @@ export const App: React.FC = () => {
             config={config}
             onOpenDobCalculator={() => setIsDobCalcOpen(true)}
             onOpenBillCalculator={() => setIsBillCalcOpen(true)}
+            onOpenVatCalculator={() => setIsVatCalcOpen(true)}
             onOpenIbanCalculator={() => setIsIbanCalcOpen(true)}
           />
         </div>
@@ -274,7 +283,7 @@ export const App: React.FC = () => {
         </div>
 
         <div className="hidden sm:flex items-center gap-3 text-slate-500 font-mono text-[10px]">
-          <span>Shortcuts: Enter=Next • Left=Back • O=52 Script Sections • S=30% Savings • B=IBAN Tool • C=Callback</span>
+          <span>Shortcuts: Enter=Next • Left=Back • V=20% VAT • S=30% Savings • B=IBAN Tool • C=Callback</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -325,6 +334,23 @@ export const App: React.FC = () => {
         config={config}
         currentAmount={customer.monthlyBill}
         onApplyBill={(billData) => handleUpdateCustomer(billData)}
+        onSwitchToVatCalculator={() => {
+          setIsBillCalcOpen(false);
+          setIsVatCalcOpen(true);
+        }}
+      />
+
+      {/* UK 20% VAT Calculator Modal */}
+      <VatCalculatorModal
+        isOpen={isVatCalcOpen}
+        onClose={() => setIsVatCalcOpen(false)}
+        config={config}
+        currentAmount={customer.monthlyBill || 42.99}
+        onApplyBill={(billData) => handleUpdateCustomer(billData)}
+        onSwitchToDiscountCalculator={() => {
+          setIsVatCalcOpen(false);
+          setIsBillCalcOpen(true);
+        }}
       />
 
       {/* UK Vocalink Modulus Checker & IBAN Calculator Modal */}

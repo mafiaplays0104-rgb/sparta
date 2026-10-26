@@ -30,15 +30,11 @@ export interface StageDefinition {
 }
 
 export const STAGES_LIST: MasterStage[] = [
-  "STAGE_1_OPENING",
-  "STAGE_2_VERIFICATION_ID",
-  "STAGE_3_VERIFICATION_COMPLETED",
-  "STAGE_4_CURRENT_SERVICE",
-  "STAGE_5_CURRENT_BILL",
-  "STAGE_6_EXPLAINING_REDUCTION",
-  "STAGE_7_FINAL_CONFIRMATION",
-  "STAGE_8_BEFORE_AGREEMENT",
-  "STAGE_9_CUSTOMER_DECISION",
+  "PHASE_1_INTRODUCTION",
+  "PHASE_2_TRANSITION_HOOK",
+  "PHASE_3_BUNDLE_PRICE_GUARANTEE",
+  "PHASE_4_HARDWARE_INSTALLATION",
+  "PHASE_5_VERIFICATION_CLOSING",
 ];
 
 export class MasterScriptEngine {
@@ -89,8 +85,189 @@ export class MasterScriptEngine {
       : "[AMOUNT]";
 
     switch (stage) {
+      // =============================================================
+      // PHASE 1 — INTRODUCTION & RAPPORT BUILDING
+      // =============================================================
+      case "PHASE_1_INTRODUCTION": {
+        const customerName = MasterScriptEngine.getCustomerDisplayName(customer) || "[Customer Name]";
+        return {
+          stage: "PHASE_1_INTRODUCTION",
+          stageNumber: 1,
+          stageName: "Phase 1: Introduction & Rapport Building",
+          objective: "Establish contact with the customer, verify name, build rapport, and introduce call purpose regarding existing landline service.",
+          goldenRuleNote: "Warm, professional greeting. Verify speaking with the account holder.",
+          getSayText: () =>
+            `“Hello, good afternoon! Am I speaking with ${customerName}?”\n\n(Customer: Yes.)\n\n“I hope you're having a lovely day. I am calling regarding your existing landline service.”`,
+          pauseInstruction: "Confirm customer identity and listen for their response.",
+          quickResponses: [
+            {
+              label: "Customer: “Yes” / Confirms Identity",
+              actionDescription: "Customer confirms they are the account holder.",
+              nextStage: "PHASE_2_TRANSITION_HOOK",
+              guidance: "Acknowledge and proceed smoothly into explaining the digital network transition.",
+            },
+            {
+              label: "“Who is calling?”",
+              actionDescription: "Customer asks who is calling.",
+              guidance: `Say: “I'm calling on behalf of your existing landline service regarding the digital network upgrade for your area.”`,
+            },
+            {
+              label: "“What is this regarding?”",
+              actionDescription: "Customer asks what the call is about.",
+              guidance: "Say: “It is regarding your current landline service and the upgrade from old copper lines to the new digital fiber network.”",
+            },
+          ],
+          why: "Polite rapport building and early identity confirmation establish authority and trust.",
+          nextStage: "PHASE_2_TRANSITION_HOOK",
+        };
+      }
+
+      // =============================================================
+      // PHASE 2 — IDENTIFYING THE TRANSITION & HOOK
+      // =============================================================
+      case "PHASE_2_TRANSITION_HOOK":
+        return {
+          stage: "PHASE_2_TRANSITION_HOOK",
+          stageNumber: 2,
+          stageName: "Phase 2: Identifying the Transition & Hook",
+          objective: "Explain the copper retirement transition and reassure the customer that phone number and handset remain identical with improved reception.",
+          goldenRuleNote: "Reassure that landline number and phone remain 100% identical; quality will be much better via the internet.",
+          getSayText: () =>
+            `“As you may know, the old copper wires your landline currently runs on are being retired, and we are upgrading lines to the new fiber digital network. In order to keep your landline active and working, we will be upgrading it to the new network.”\n\n(Customer: Oh right, I was wondering what was happening / My husband usually deals with that side of things.)\n\n“No problem at all, I'm here to assist you step-by-step. The great news is your landline number and phone will remain exactly the same. The only difference is that your call quality and reception will be much better since it will operate via the internet.”`,
+          pauseInstruction: "Listen to the customer's response regarding the national line switch-off.",
+          quickResponses: [
+            {
+              label: "“I was wondering what was happening”",
+              actionDescription: "Customer is aware or interested in the transition.",
+              nextStage: "PHASE_3_BUNDLE_PRICE_GUARANTEE",
+              guidance: "Move to presenting the privileged bundle and 2-year price guarantee.",
+            },
+            {
+              label: "“My husband/partner usually deals with that”",
+              actionDescription: "Customer mentions a family member.",
+              guidance: "Say: “No problem at all, I'm here to assist you step-by-step. The great news is your landline number and phone will remain exactly the same.”",
+            },
+            {
+              label: "“Will my number change?”",
+              actionDescription: "Customer worries about losing their phone number.",
+              guidance: "Reassure: “Your landline number and existing phone will remain exactly the same. Only call quality will improve.”",
+            },
+          ],
+          why: "Clear hook explaining copper retirement gives legitimate reason for the upgrade.",
+          nextStage: "PHASE_3_BUNDLE_PRICE_GUARANTEE",
+          prevStage: "PHASE_1_INTRODUCTION",
+        };
+
+      // =============================================================
+      // PHASE 3 — PRESENTING THE BUNDLE & PRICE GUARANTEE
+      // =============================================================
+      case "PHASE_3_BUNDLE_PRICE_GUARANTEE":
+        return {
+          stage: "PHASE_3_BUNDLE_PRICE_GUARANTEE",
+          stageNumber: 3,
+          stageName: "Phase 3: Presenting the Bundle & Price Guarantee",
+          objective: "Present bundle: digital landline + high-speed fiber broadband + unlimited calls at £42.99/mo + VAT (£51.58 total) with 2-year price guarantee.",
+          goldenRuleNote: "Clearly state: £42.99 per month plus VAT (making it £51.58 total) with a locked 2-year price guarantee.",
+          getSayText: () =>
+            `“As a privileged customer, we are bundling your landline upgrade with high-speed fiber broadband and unlimited calls to any local, national UK landline and mobile numbers.”\n\n(Customer: How much is that going to cost?)\n\n“The total price for your digital landline and broadband services will be only £42.99 per month plus VAT (making it £51.58 total), and it comes with a price promise guarantee locked in for the next two years so your bill will not fluctuate or go up.”`,
+          pauseInstruction: "Present pricing clearly and listen for customer acceptance.",
+          quickResponses: [
+            {
+              label: "Customer asks: “How much is that going to cost?”",
+              actionDescription: "Customer asks for pricing.",
+              guidance: "State: “The total price is only £42.99 per month plus VAT, making it £51.58 total, locked in for 2 years.”",
+            },
+            {
+              label: "Customer Agrees / Accepts Price",
+              actionDescription: "Customer is happy with £51.58 total and 2-year price guarantee.",
+              nextStage: "PHASE_4_HARDWARE_INSTALLATION",
+              guidance: "Move smoothly into router dispatch and free engineer details.",
+            },
+            {
+              label: "“Does that include VAT?”",
+              actionDescription: "Customer clarifies tax amount.",
+              guidance: "Say: “The base bundle is £42.99 per month, plus 20% VAT which is £8.59, making it exactly £51.58 in total with no hidden fees.”",
+            },
+            {
+              label: "“Will the price increase next year?”",
+              actionDescription: "Customer asks about price hikes.",
+              guidance: "Say: “No, it comes with a price promise guarantee locked in for the next two years so your bill will not fluctuate or go up.”",
+            },
+          ],
+          why: "Transparent all-inclusive pricing with a 2-year price lock eliminates anxiety of mid-contract price rises.",
+          nextStage: "PHASE_4_HARDWARE_INSTALLATION",
+          prevStage: "PHASE_2_TRANSITION_HOOK",
+        };
+
+      // =============================================================
+      // PHASE 4 — HARDWARE & INSTALLATION DETAILS
+      // =============================================================
+      case "PHASE_4_HARDWARE_INSTALLATION":
+        return {
+          stage: "PHASE_4_HARDWARE_INSTALLATION",
+          stageNumber: 4,
+          stageName: "Phase 4: Hardware & Installation Details",
+          objective: "Detail digital router postal delivery (£30 upgrade charge vs £100-£120 market) and completely free certified engineer installation visit.",
+          goldenRuleNote: "Reassure the customer that the certified engineer setup is completely FREE and they do not need to install anything themselves.",
+          getSayText: () =>
+            `“We will also send you a digital router by post. While these normally cost £100 to £120 in the market, as an upgrade customer it is only a one-time £30 charge automatically adjusted on your bills. Furthermore, a certified engineer's visit and installation charges will be completely free.”\n\n(Customer: Do I have to install the equipment myself?)\n\n“Not at all! You just keep the router package when it arrives, and our engineers will visit your property to handle the entire setup on your behalf.”`,
+          pauseInstruction: "Listen to customer questions on equipment dispatch and engineer setup.",
+          quickResponses: [
+            {
+              label: "Customer asks: “Do I have to install it myself?”",
+              actionDescription: "Customer asks about self-installation.",
+              guidance: "Say: “Not at all! You just keep the router package when it arrives, and our engineers will visit your property to handle the entire setup on your behalf.”",
+            },
+            {
+              label: "Customer agrees / Pleased with free engineer",
+              actionDescription: "Customer accepts router and installation plan.",
+              nextStage: "PHASE_5_VERIFICATION_CLOSING",
+              guidance: "Transition to senior verification officer closing.",
+            },
+            {
+              label: "“When is the £30 charged?”",
+              actionDescription: "Customer asks about the one-time router fee.",
+              guidance: "Say: “It is a one-time £30 upgrade charge automatically adjusted on your bills, saving you over £70 off market price.”",
+            },
+          ],
+          why: "Eliminates fear of complicated technology setup by providing a certified engineer at no cost.",
+          nextStage: "PHASE_5_VERIFICATION_CLOSING",
+          prevStage: "PHASE_3_BUNDLE_PRICE_GUARANTEE",
+        };
+
+      // =============================================================
+      // PHASE 5 — VERIFICATION & CLOSING
+      // =============================================================
+      case "PHASE_5_VERIFICATION_CLOSING":
+        return {
+          stage: "PHASE_5_VERIFICATION_CLOSING",
+          stageNumber: 5,
+          stageName: "Phase 5: Verification & Closing",
+          objective: "Transfer customer to senior verification officer for a 1-minute price and address confirmation before dispatching router and confirmation letter.",
+          goldenRuleNote: "Brief 1-minute confirmation with senior verification officer before dispatching confirmation letter and router.",
+          getSayText: () =>
+            `“To finalize everything, I will quickly connect you to our senior verification officer who will take just a minute to confirm your new package price and address before sending out your official confirmation letter and router. Please hold the line for a moment.”\n\n(Customer: Alright, thank you.)`,
+          pauseInstruction: "Customer agrees ('Alright, thank you'). Transfer line to Senior Verification Officer.",
+          quickResponses: [
+            {
+              label: "Customer: “Alright, thank you” (Proceed to Transfer)",
+              actionDescription: "Customer agrees to hold for verification officer.",
+              nextStage: "CALL_COMPLETED" as MasterStage,
+              guidance: "Initiate warm transfer to senior verification officer and complete lead disposition.",
+            },
+            {
+              label: "“How long will this take?”",
+              actionDescription: "Customer asks for verification time.",
+              guidance: "Say: “Just about one minute to confirm your new package price and address before we dispatch your router.”",
+            },
+          ],
+          why: "Independent verification confirms contract terms, ensures compliance, and finalizes delivery.",
+          nextStage: "CALL_COMPLETED" as MasterStage,
+          prevStage: "PHASE_4_HARDWARE_INSTALLATION",
+        };
+
       // -------------------------------------------------------------
-      // STAGE 1 — OPENING (Section 1)
+      // LEGACY STAGES (Maintained for Backward Compatibility)
       // -------------------------------------------------------------
       case "STAGE_1_OPENING":
         return {

@@ -1,4 +1,9 @@
 export type MasterStage =
+  | "PHASE_1_INTRODUCTION"
+  | "PHASE_2_TRANSITION_HOOK"
+  | "PHASE_3_BUNDLE_PRICE_GUARANTEE"
+  | "PHASE_4_HARDWARE_INSTALLATION"
+  | "PHASE_5_VERIFICATION_CLOSING"
   | "STAGE_1_OPENING"
   | "STAGE_2_VERIFICATION_ID"
   | "STAGE_3_VERIFICATION_COMPLETED"
@@ -228,6 +233,24 @@ export interface BillSavingsCalculation {
   formattedDiscounted: string;
   formattedMonthlySavings: string;
   formattedAnnualSavings: string;
+  speechSnippet: string;
+}
+
+export interface VatCalculation {
+  netAmount: number;
+  vatRate: number;
+  vatAmount: number;
+  grossAmount: number;
+  formattedNet: string;
+  formattedVat: string;
+  formattedGross: string;
+  annualGross: number;
+  formattedAnnualGross: string;
+  twoYearGross: number;
+  formattedTwoYearGross: string;
+  routerFee?: number;
+  firstBillWithRouter?: number;
+  formattedFirstBillWithRouter?: string;
   speechSnippet: string;
 }
 
