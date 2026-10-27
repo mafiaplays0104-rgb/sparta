@@ -21,15 +21,15 @@ export const CallProgress: React.FC<CallProgressProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          5 Script Phases
+          9 Master Steps
         </span>
         <span className="text-[10px] font-mono text-sparta-400 font-bold">
-          {currentIndex >= 0 ? currentIndex + 1 : STAGES_LIST.length} / {STAGES_LIST.length}
+          Step {currentIndex >= 0 ? currentIndex + 1 : STAGES_LIST.length} / {STAGES_LIST.length}
         </span>
       </div>
 
-      {/* 5 Phases Workflow List */}
-      <nav aria-label="Workflow stages" className="space-y-0.5 flex-1">
+      {/* 9 Steps Workflow List */}
+      <nav aria-label="Workflow stages" className="space-y-1 flex-1">
         {STAGES_LIST.map((stageKey, idx) => {
           const isCurrent = stageKey === currentStage;
           const isCompleted = completedStages.has(stageKey);
@@ -56,10 +56,10 @@ export const CallProgress: React.FC<CallProgressProps> = ({
                     : "text-slate-600"
                 }`}
               >
-                {isCompleted ? "✓" : isCurrent ? `${idx + 1}` : `${idx + 1}`}
+                {isCompleted ? "✓" : `${idx + 1}`}
               </span>
-              <span className="truncate text-[11px] leading-tight">
-                {stageDef.stageName.replace(/Phase \d+:\s*/, "").replace(/Stage \d+ — /, "")}
+              <span className="truncate text-[11px] leading-tight font-medium">
+                {stageDef.stepShortTitle || stageDef.stageName.replace(/Step \d+:\s*/, "")}
               </span>
             </button>
           );

@@ -145,45 +145,68 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
 
         {/* 3. CONTEXTUAL INLINE INPUTS / QUICK BUTTONS */}
         <div className="my-2 flex flex-col items-center space-y-2.5">
-          {/* VAT Calculator inline helper for pricing stage */}
-          {unit.inputType === "VAT_CALCULATOR" && (
-            <div className="w-full max-w-lg bg-slate-950/90 p-3.5 rounded-2xl border border-teal-500/30 flex flex-col gap-2.5 shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-teal-400" />
-                  <span className="text-xs font-bold text-slate-200">
-                    Price Guarantee: £42.99 + 20% VAT = <span className="text-emerald-400 font-mono">£51.58/mo</span>
+          {/* Dynamic Sparta Package Helper */}
+          {unit.inputType === "VAT_CALCULATOR" && (() => {
+            const branch = CalculatorTools.determineProbabilityBranch(customer);
+            const recPlan = CalculatorTools.recommendSpartaPlan(customer);
+            const plan = customer.selectedPlanId
+              ? CalculatorTools.getSpartaPlanById(customer.selectedPlanId) || recPlan
+              : recPlan;
+
+            return (
+              <div className="w-full max-w-xl bg-slate-950/95 p-3.5 rounded-2xl border border-teal-500/40 flex flex-col gap-2.5 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-teal-400" />
+                    <span className="text-xs font-bold text-white">
+                      Recommended: <span className="text-sparta-300 font-bold">{plan.name}</span>
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-800 uppercase font-mono">
+                    {branch.replace("_", " ")}
                   </span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-800">
-                  2-YEAR PRICE LOCK
-                </span>
+
+                <div className="flex items-baseline justify-between pt-1 border-t border-slate-800">
+                  <span className="text-xs text-slate-300">
+                    Tariff: <span className="font-mono font-bold text-white">{plan.displayBase}</span> + 20% VAT
+                  </span>
+                  <div className="text-right">
+                    <span className="text-base font-black text-emerald-400 font-mono">
+                      ≈ {plan.displayGross}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-sans">
+                      24-Mo Price Promise Lock
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                  <span className="text-[11px] text-slate-400">
+                    Includes: {plan.minutes} • {plan.broadbandSpeed}
+                  </span>
+                  {onOpenVatCalculator && (
+                    <button
+                      onClick={onOpenVatCalculator}
+                      className="px-3 py-1 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>Pricing Matrix [V]</span>
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                <span className="text-[11px] text-slate-400">
-                  Net: £42.99 • VAT (20%): £8.59 • Total: £51.58
-                </span>
-                {onOpenVatCalculator && (
-                  <button
-                    onClick={onOpenVatCalculator}
-                    className="px-3 py-1 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
-                  >
-                    <Receipt className="w-3.5 h-3.5" />
-                    <span>Open 20% VAT Calculator [V]</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Bill input helper */}
           {unit.inputType === "BILL_INPUT" && (
-            <div className="w-full max-w-md bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex flex-col items-center gap-2">
+            <div className="w-full max-w-md bg-slate-950/90 p-3 rounded-2xl border border-slate-800 flex flex-col items-center gap-2">
               <div className="flex items-center gap-2 w-full">
                 <span className="text-xs text-slate-400 font-medium">Customer states:</span>
                 <input
                   type="text"
-                  placeholder="e.g. 65 or £80.99"
+                  placeholder="e.g. £48 or 48.00"
                   value={customBillInput}
                   onChange={(e) => setCustomBillInput(e.target.value)}
                   className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-sm font-bold text-white font-mono focus:border-sparta-500 focus:outline-none"
@@ -208,7 +231,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
                   className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold underline"
                 >
                   <Percent className="w-3 h-3" />
-                  <span>Open 30% Savings Calculator</span>
+                  <span>Compare with Sparta Plans &amp; Calculate Savings</span>
                 </button>
               </div>
             </div>
@@ -235,25 +258,26 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
             </div>
           )}
 
-          {/* Optional DOB helper */}
+          {/* Optional DOB & Pensioner Rapport helper */}
           {unit.inputType === "DOB_INPUT" && (
-            <div className="w-full max-w-md bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs text-slate-300 font-medium">
-                  {customer.dob
-                    ? `DOB: ${customer.dob}`
-                    : customer.birthYear
-                    ? `Born: ${customer.birthYear} (~${customer.calculatedAge}y)`
-                    : "DOB optional"}
-                </span>
+            <div className="w-full max-w-lg bg-slate-950/90 p-3 rounded-2xl border border-indigo-500/30 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-indigo-400" />
+                  <span className="text-xs text-slate-200 font-bold">
+                    DOB: <span className="text-indigo-300 font-mono">{customer.dob || "14/05/1952"}</span>
+                  </span>
+                </div>
+                <button
+                  onClick={onOpenDobCalculator}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2.5 py-1 rounded-lg text-xs"
+                >
+                  Age Tool [D]
+                </button>
               </div>
-              <button
-                onClick={onOpenDobCalculator}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1 rounded-lg text-xs"
-              >
-                DOB Tool
-              </button>
+              <p className="text-[11px] text-indigo-200/90 italic border-t border-slate-800 pt-1">
+                💬 Approved line: “{customer.dob || "14/05/1952"}? My goodness, you must have seen a lots of changes in this country by now... HAHAHA”
+              </p>
             </div>
           )}
 

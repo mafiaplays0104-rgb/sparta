@@ -1,4 +1,15 @@
 export type MasterStage =
+  // Sparta Master 9-Step Conversation Flow
+  | "STEP_1_OPENING_TECHNICAL"
+  | "STEP_2_PROBABILITY_DISCOVERY"
+  | "STEP_3_DYNAMIC_PACKAGE_PITCH"
+  | "STEP_4_SPARTA_BRAND_DROP"
+  | "STEP_5_VERIFICATION_AGE_RAPPORT"
+  | "STEP_6_FREE_SERVICES_EXTENSIONS"
+  | "STEP_7_ENGINEER_ROUTER_COST"
+  | "STEP_8_DIRECT_DEBIT_DPA1998"
+  | "STEP_9_VERIFICATION_HANDOFF"
+  // Legacy phase aliases for backward compatibility
   | "PHASE_1_INTRODUCTION"
   | "PHASE_2_TRANSITION_HOOK"
   | "PHASE_3_BUNDLE_PRICE_GUARANTEE"
@@ -101,6 +112,23 @@ export interface CustomerRecord {
   accountNumber?: string;
   bankName?: string;
   iban?: string;
+
+  // Sparta Specific Fields
+  callVolume?: "LOW_HARDLY_ANY" | "HIGH_FREQUENT" | "AVERAGE" | "UNSPECIFIED";
+  broadbandStatus?: "NO_BROADBAND" | "NORMAL_BROADBAND" | "FIBRE_BROADBAND";
+  selectedPlanId?: string;
+  selectedPlanName?: string;
+  selectedPlanBasePrice?: number;
+  selectedPlanGrossPrice?: number;
+  middleInitial?: string;
+  hasExtensionPhones?: boolean;
+  extensionType?: "CORDLESS" | "CORDED" | "BOTH" | "NONE";
+  extensionDetails?: string;
+  brandDropAcknowledged?: boolean;
+  pricePromiseAcknowledged?: boolean;
+  routerFeeAdjustedAcknowledged?: boolean;
+  dpaMandateFormRequested?: boolean;
+  paymentMethod?: "DIRECT_DEBIT" | "CASH" | "CHEQUE";
 }
 
 export interface OfferConfig {

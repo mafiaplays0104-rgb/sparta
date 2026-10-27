@@ -53,9 +53,9 @@ export const objectionLibrary: ObjectionItem[] = [
     ],
     intent: "Customer requires clear caller and company identity.",
     recommendedResponse:
-      "“I'm calling from [COMPANY NAME] regarding your telephone service and current monthly bill.\n\nI'm contacting you about the available reduction and checking whether your service qualifies for it.”",
-    optionalFollowUp: "Always state approved company name truthfully.",
-    stopCondition: "Never invent or misrepresent company identity.",
+      "“This upgrade is done by Sparta Telecom. Sparta Telecom, BT, and TalkTalk all run and operate on the exact same Openreach network, so nothing will be changing physically at your property and you keep the exact same landline and number, only the billing name changes so your telephone bills can be cheaper with our 24-month price promise guarantee.”",
+    optionalFollowUp: "Always state approved Sparta Telecom name and Openreach network partnership truthfully.",
+    stopCondition: "Clarify Sparta Telecom is a separate and independent company on Openreach.",
     severity: "MEDIUM",
     allowContinue: true,
     sensitiveInfoInvolved: false,
@@ -69,10 +69,10 @@ export const objectionLibrary: ObjectionItem[] = [
     triggers: ["are you from bt?", "is this bt?", "are you british telecom?", "bt?"],
     intent: "Customer asks whether you are BT.",
     recommendedResponse:
-      "“I'm calling from [COMPANY NAME]. I'll be happy to explain exactly who we are before we continue.\n\nI don't want to give you the wrong information, so I'll keep everything clear and straightforward.”",
+      "“No, Sparta Telecom is a totally separate and independent company from BT, but like BT and TalkTalk, we all run and operate on the exact same Openreach network. Because of that, nothing physically changes at your property, your number stays the same, and your bills are protected by our 24-month price promise guarantee.”",
     optionalFollowUp:
-      "If authorized to represent BT: “I'm calling on behalf of BT regarding your telephone service and current monthly bill. I'm contacting you about the available reduction and checking whether your service qualifies for it.”",
-    stopCondition: "Only claim to represent BT if strictly authorized.",
+      "Always clarify that Sparta Telecom is an independent provider on the Openreach network.",
+    stopCondition: "Never claim to be BT. Emphasize separate company running on Openreach.",
     severity: "HIGH",
     allowContinue: true,
     sensitiveInfoInvolved: false,

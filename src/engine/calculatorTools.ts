@@ -1,4 +1,5 @@
-import { BillSavingsCalculation, VatCalculation, DobAgeCalculation, OfferConfig } from "../types";
+import { BillSavingsCalculation, VatCalculation, DobAgeCalculation, OfferConfig, CustomerRecord } from "../types";
+import { SPARTA_PLANS, SpartaPlan, SpartaPlanCategory } from "../data/spartaPlans";
 
 export class CalculatorTools {
   private static readonly CURRENT_YEAR = 2026;
@@ -95,11 +96,18 @@ export class CalculatorTools {
     const netAmount = this.parseBillAmount(amount);
     if (netAmount === null || netAmount <= 0) return null;
 
-    // Special exact case from script: £42.99 + 20% VAT = £51.58
+    // Exact Sparta Telecom plan prices at 20% VAT
     let grossAmount: number;
     let vatAmount: number;
 
-    if (Math.abs(netAmount - 42.99) < 0.005 && vatRate === 20) {
+    const spartaMatch = SPARTA_PLANS.find(
+      (p) => Math.abs(netAmount - p.basePrice) < 0.005 && vatRate === 20
+    );
+
+    if (spartaMatch) {
+      grossAmount = spartaMatch.grossPrice;
+      vatAmount = spartaMatch.vatAmount;
+    } else if (Math.abs(netAmount - 42.99) < 0.005 && vatRate === 20) {
       grossAmount = 51.58;
       vatAmount = 8.59;
     } else {
@@ -118,7 +126,7 @@ export class CalculatorTools {
     const formattedTwoYearGross = `£${twoYearGross.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formattedFirstBillWithRouter = `£${firstBillWithRouter.toFixed(2)}`;
 
-    const speechSnippet = `The total price for your digital landline and broadband services will be only ${formattedNet} per month plus VAT (making it ${formattedGross} total), and it comes with a price promise guarantee locked in for the next two years so your bill will not fluctuate or go up.`;
+    const speechSnippet = `So what you will be paying after the upgrade as your telephone bills that is only ${formattedNet} + VAT (making it approx. ${formattedGross} total) each month, locked in with a 24-month price promise guarantee so your bill won't increase under any circumstances.`;
 
     return {
       netAmount,
@@ -153,7 +161,14 @@ export class CalculatorTools {
     let netAmount: number;
     let vatAmount: number;
 
-    if (Math.abs(gross - 51.58) < 0.005 && vatRate === 20) {
+    const spartaGrossMatch = SPARTA_PLANS.find(
+      (p) => Math.abs(gross - p.grossPrice) < 0.005 && vatRate === 20
+    );
+
+    if (spartaGrossMatch) {
+      netAmount = spartaGrossMatch.basePrice;
+      vatAmount = spartaGrossMatch.vatAmount;
+    } else if (Math.abs(gross - 51.58) < 0.005 && vatRate === 20) {
       netAmount = 42.99;
       vatAmount = 8.59;
     } else {
@@ -172,7 +187,7 @@ export class CalculatorTools {
     const formattedTwoYearGross = `£${twoYearGross.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formattedFirstBillWithRouter = `£${firstBillWithRouter.toFixed(2)}`;
 
-    const speechSnippet = `The total price for your digital landline and broadband services will be only ${formattedNet} per month plus VAT (making it ${formattedGross} total), and it comes with a price promise guarantee locked in for the next two years so your bill will not fluctuate or go up.`;
+    const speechSnippet = `So what you will be paying after the upgrade as your telephone bills that is only ${formattedNet} + VAT (making it approx. ${formattedGross} total) each month, locked in with a 24-month price promise guarantee so your bill won't increase under any circumstances.`;
 
     return {
       netAmount,
@@ -359,6 +374,119 @@ export class CalculatorTools {
       isEligible: evalRes.isEligible,
       eligibilityMessage: evalRes.message,
       formattedDisplay: `DOB ${dobStr} → Born ${dobRes.birthYear} (${dobRes.age} yrs old)`,
+    };
+  }
+
+  // =========================================================================
+  // SPARTA TELECOM PRICING MATRIX & PROBABILITY BRANCHING ENGINE
+  // =========================================================================
+
+  /**
+   * Return all 9 Sparta Telecom plans
+   */
+  public static getSpartaPlans(): SpartaPlan[] {
+    return SPARTA_PLANS;
+  }
+
+  /**
+   * Find plan by ID
+   */
+  public static getSpartaPlanById(id: string): SpartaPlan | undefined {
+    return SPARTA_PLANS.find((p) => p.id === id);
+  }
+
+  /**
+   * Get plans by category
+   */
+  public static getSpartaPlansByCategory(category: SpartaPlanCategory): SpartaPlan[] {
+    return SPARTA_PLANS.filter((p) => p.category === category);
+  }
+
+  /**
+   * Determine Probability Branch from customer's broadband status
+   */
+  public static determineProbabilityBranch(customer: CustomerRecord): SpartaPlanCategory {
+    if (customer.broadbandStatus === "FIBRE_BROADBAND") {
+      return "FIBRE_BROADBAND";
+    }
+    if (customer.broadbandStatus === "NORMAL_BROADBAND") {
+      return "NORMAL_BROADBAND";
+    }
+    return "LANDLINE_ONLY";
+  }
+
+  /**
+   * Recommends the ideal Sparta Telecom plan based on probability qualification
+   */
+  public static recommendSpartaPlan(customer: CustomerRecord): SpartaPlan {
+    const branch = this.determineProbabilityBranch(customer);
+    const isHighCall =
+      customer.callVolume === "HIGH_FREQUENT" ||
+      customer.landlineUsage === "HIGH" ||
+      customer.landlineUsage === "MODERATE";
+
+    if (branch === "LANDLINE_ONLY") {
+      return isHighCall
+        ? SPARTA_PLANS.find((p) => p.id === "sparta_enhanced_line_only")!
+        : SPARTA_PLANS.find((p) => p.id === "sparta_line_only")!;
+    }
+
+    if (branch === "NORMAL_BROADBAND") {
+      return isHighCall
+        ? SPARTA_PLANS.find((p) => p.id === "sparta_talk_unlimited_normal_bb")!
+        : SPARTA_PLANS.find((p) => p.id === "sparta_line_normal_bb")!;
+    }
+
+    // FIBRE_BROADBAND
+    if (isHighCall) {
+      return SPARTA_PLANS.find((p) => p.id === "sparta_unlimited_f40_enhanced")!;
+    }
+    return SPARTA_PLANS.find((p) => p.id === "sparta_talk_fibre_40")!;
+  }
+
+  /**
+   * Compare customer's current bill against a Sparta Telecom plan
+   */
+  public static calculateSpartaComparison(
+    currentBillInput: number | string,
+    plan: SpartaPlan
+  ): {
+    currentBill: number;
+    spartaBase: number;
+    spartaVat: number;
+    spartaGross: number;
+    monthlySavings: number;
+    twoYearSavings: number;
+    isSaving: boolean;
+    speechPitch: string;
+  } | null {
+    const currentBill = this.parseBillAmount(currentBillInput);
+    if (currentBill === null) return null;
+
+    const spartaGross = plan.grossPrice;
+    const monthlySavings = Math.round((currentBill - spartaGross) * 100) / 100;
+    const twoYearSavings = Math.round(monthlySavings * 24 * 100) / 100;
+    const isSaving = monthlySavings > 0;
+
+    const formattedDiff = `£${Math.abs(monthlySavings).toFixed(2)}`;
+    const formattedTwoYearDiff = `£${Math.abs(twoYearSavings).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    let speechPitch: string;
+    if (isSaving) {
+      speechPitch = `At the moment you're paying around £${currentBill.toFixed(2)}, but with Sparta Telecom your revised telephone bill will be only ${plan.displayBase} (which is approx. ${plan.displayGross} including 20% VAT). That saves you ${formattedDiff} each month, which adds up to ${formattedTwoYearDiff} saved over your 24-month price promise guarantee!`;
+    } else {
+      speechPitch = `Your new package with Sparta Telecom will be only ${plan.displayBase} (approx. ${plan.displayGross} inc. VAT) locked in with our 24-month price promise guarantee, meaning no unexpected price hikes for the next two years.`;
+    }
+
+    return {
+      currentBill,
+      spartaBase: plan.basePrice,
+      spartaVat: plan.vatAmount,
+      spartaGross,
+      monthlySavings,
+      twoYearSavings,
+      isSaving,
+      speechPitch,
     };
   }
 }

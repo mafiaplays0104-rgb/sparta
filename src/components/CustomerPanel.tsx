@@ -6,8 +6,14 @@ import {
   CheckCircle2,
   HardDrive,
   Clock,
+  Phone,
+  Wifi,
+  Building,
+  AlertTriangle,
+  CreditCard,
 } from "lucide-react";
 import { CustomerRecord, OfferConfig } from "../types";
+import { CalculatorTools } from "../engine/calculatorTools";
 
 interface CustomerPanelProps {
   customer: CustomerRecord;
@@ -26,27 +32,54 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
   onOpenVatCalculator,
   onOpenIbanCalculator,
 }) => {
-  // Checklist matching the 5 Live Phases
+  // Recommended plan based on customer's discovery answers
+  const recommendedPlan = CalculatorTools.recommendSpartaPlan(customer);
+  const selectedPlan = customer.selectedPlanId
+    ? CalculatorTools.getSpartaPlanById(customer.selectedPlanId) || recommendedPlan
+    : recommendedPlan;
+
+  // Comparison against current bill if available
+  const comparison = customer.monthlyBill
+    ? CalculatorTools.calculateSpartaComparison(customer.monthlyBill, selectedPlan)
+    : null;
+
+  // 9 Master Steps Checklist
   const checklist = [
     {
-      label: "Phase 1: Name Verified & Rapport",
-      checked: !!(customer.firstName || customer.lastName || customer.personalDetailsConfirmed),
+      label: "1. Opening & Technical Pitch",
+      checked: !!(customer.firstName || customer.personalDetailsConfirmed),
     },
     {
-      label: "Phase 2: Digital Fiber Transition",
-      checked: customer.isUsingAtHome !== undefined && customer.isUsingAtHome !== "UNCONFIRMED",
+      label: "2. Probability Qualified (Usage & Bill)",
+      checked: !!(customer.callVolume || customer.broadbandStatus || customer.monthlyBill),
     },
     {
-      label: "Phase 3: £42.99 + VAT (£51.58 Total)",
-      checked: customer.monthlyBill !== undefined || !!customer.termsUnderstood,
+      label: "3. Dynamic Package Pitch (+VAT)",
+      checked: !!(customer.selectedPlanId || customer.termsUnderstood),
     },
     {
-      label: "Phase 4: £30 Router & Free Setup",
-      checked: !!customer.termsUnderstood || customer.finalConfirmationGiven,
+      label: "4. Sparta Brand Drop & Openreach",
+      checked: !!(customer.brandDropAcknowledged || customer.pricePromiseAcknowledged),
     },
     {
-      label: "Phase 5: Senior Verification Officer",
-      checked: !!customer.customerDecision || !!customer.finalConfirmationGiven,
+      label: "5. Details & Pensioner Rapport",
+      checked: !!(customer.dob || customer.isEligibleAge),
+    },
+    {
+      label: "6. Free 1571 & Extension Checked",
+      checked: customer.hasExtensionPhones !== undefined,
+    },
+    {
+      label: "7. Free Engineer & £30 Router",
+      checked: !!customer.routerFeeAdjustedAcknowledged,
+    },
+    {
+      label: "8. Direct Debit & DPA 1998 Form",
+      checked: !!(customer.bankName || customer.dpaMandateFormRequested),
+    },
+    {
+      label: "9. Colleague Verbal Handoff",
+      checked: !!(customer.finalConfirmationGiven || customer.customerDecision === "YES"),
     },
   ];
 
@@ -58,70 +91,123 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
       <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Customer &amp; Account
+            Customer &amp; Landline
           </span>
-          {customer.consumerIdStatus === "VERIFIED" && (
-            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-0.5">
-              <ShieldCheck className="w-2.5 h-2.5" />
-              <span>VERIFIED</span>
-            </span>
-          )}
+          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-sparta-950 text-sparta-400 border border-sparta-800 flex items-center gap-0.5">
+            <ShieldCheck className="w-2.5 h-2.5" />
+            <span>ACTIVE LINE</span>
+          </span>
         </div>
 
         <div className="font-bold text-white text-sm">
           {customer.firstName || customer.lastName
-            ? `${customer.title || "Mr/Mrs"} ${customer.firstName || ""} ${customer.lastName || ""}`
+            ? `${customer.title || "Mr/Mrs"} ${customer.firstName || ""} ${customer.middleInitial ? customer.middleInitial + ". " : ""}${customer.lastName || ""}`
             : "Customer"}
         </div>
         <div className="text-slate-300 font-mono text-xs">
-          {customer.doorNumber ? `${customer.doorNumber}, ` : ""}
-          {customer.postcode || "—"}
+          {customer.address || "14 Highfield Road"}, {customer.postcode || "B33 8TH"}
         </div>
-        <div className="text-slate-400 font-mono text-xs">
-          {customer.contactNumber || "—"}
+        <div className="text-slate-400 font-mono text-xs flex items-center gap-1">
+          <Phone className="w-3 h-3 text-sparta-400" />
+          <span>{customer.contactNumber || "0121 496 0123"}</span>
         </div>
 
-        {(customer.consumerId || customer.customerId) && (
-          <div className="text-[11px] text-sparta-300 pt-1 border-t border-slate-900 flex items-center justify-between">
-            <span className="font-mono">ID: {customer.consumerId || customer.customerId}</span>
-            <span className="text-[10px] text-emerald-400 font-bold">✓ Checked</span>
-          </div>
-        )}
+        {/* DOB & Pensioner Rapport */}
+        <div className="text-[11px] text-indigo-300 pt-1 border-t border-slate-900 flex items-center justify-between">
+          <span>DOB: {customer.dob || "14/05/1952"}</span>
+          <button
+            onClick={onOpenDobCalculator}
+            className="text-[10px] underline hover:text-indigo-200"
+          >
+            Age Tool
+          </button>
+        </div>
 
-        {(customer.dob || customer.birthYear) && (
-          <div className="text-[11px] text-indigo-300 pt-1 border-t border-slate-900 flex items-center justify-between">
-            <span>DOB: {customer.dob || `Born ${customer.birthYear}`}</span>
-            <button
-              onClick={onOpenDobCalculator}
-              className="text-[10px] underline hover:text-indigo-200"
-            >
-              Edit
-            </button>
-          </div>
-        )}
+        {/* Medical Alarm check */}
+        <div className="text-[11px] pt-1 border-t border-slate-900 flex items-center justify-between">
+          <span className="text-slate-400">Medical Alarm (Lifeline):</span>
+          <span
+            className={`font-semibold ${
+              customer.medicalAlarm ? "text-amber-400" : "text-emerald-400"
+            }`}
+          >
+            {customer.medicalAlarm ? "Yes (Careline)" : "None (Independent)"}
+          </span>
+        </div>
 
-        {(customer.sortCode || customer.accountNumber) && (
-          <div className="text-[11px] text-cyan-300 pt-1 border-t border-slate-900 flex items-center justify-between">
-            <span className="font-mono truncate">
-              Bank: {customer.sortCode} / {customer.accountNumber}
+        {/* Extension phones */}
+        {customer.extensionType && (
+          <div className="text-[11px] pt-1 border-t border-slate-900 flex items-center justify-between">
+            <span className="text-slate-400">Extension Phones:</span>
+            <span className="font-semibold text-slate-200">
+              {customer.extensionType === "CORDLESS"
+                ? "Cordless (Compatible)"
+                : customer.extensionType === "CORDED"
+                ? "Corded (Engineer Setup)"
+                : "None"}
             </span>
-            {onOpenIbanCalculator && (
-              <button
-                onClick={onOpenIbanCalculator}
-                className="text-[10px] underline hover:text-cyan-200 ml-1 flex-shrink-0"
-              >
-                Edit
-              </button>
-            )}
           </div>
         )}
       </div>
 
-      {/* 2. UPGRADE PACKAGE & PRICING */}
-      <div className="space-y-1.5 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
+      {/* 2. PROBABILITY QUALIFICATION & USAGE */}
+      <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Digital Fiber Package
+            Probability Profile
+          </span>
+          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
+            {CalculatorTools.determineProbabilityBranch(customer).replace("_", " ")}
+          </span>
+        </div>
+
+        <div className="flex justify-between items-center py-0.5 text-[11px]">
+          <span className="text-slate-400">Call Volume:</span>
+          <span className="font-semibold text-slate-200">
+            {customer.callVolume === "LOW_HARDLY_ANY"
+              ? "Hardly Any / Low"
+              : customer.callVolume === "HIGH_FREQUENT"
+              ? "A Lot / Frequent"
+              : "Average Usage"}
+          </span>
+        </div>
+
+        <div className="flex justify-between items-center py-0.5 text-[11px]">
+          <span className="text-slate-400">Broadband:</span>
+          <span className="font-semibold text-slate-200">
+            {customer.broadbandStatus === "FIBRE_BROADBAND"
+              ? "Fibre 40 / 80"
+              : customer.broadbandStatus === "NORMAL_BROADBAND"
+              ? "Normal BB (24Mbps)"
+              : "None (Landline Only)"}
+          </span>
+        </div>
+
+        <div className="flex justify-between items-center py-0.5 text-[11px]">
+          <span className="text-slate-400">Current Average Bill:</span>
+          <span className="font-bold text-amber-300 font-mono">
+            {customer.monthlyBill ? `£${customer.monthlyBill.toFixed(2)}/mo` : "Not provided"}
+          </span>
+        </div>
+
+        {customer.bankName && (
+          <div className="flex justify-between items-center py-0.5 text-[11px] pt-1 border-t border-slate-900">
+            <span className="text-slate-400 flex items-center gap-1">
+              <Building className="w-3 h-3 text-cyan-400" />
+              <span>DPA Bank Form:</span>
+            </span>
+            <span className="font-bold text-cyan-300">
+              {customer.bankName}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* 3. REVISED SPARTA TELECOM PACKAGE */}
+      <div className="space-y-1.5 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-sparta-400">
+            Sparta Package
           </span>
           <div className="flex items-center gap-1">
             {onOpenVatCalculator && (
@@ -138,47 +224,64 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
             <button
               onClick={onOpenBillCalculator}
               className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5"
-              title="Open 30% Savings Calculator [S]"
+              title="Open Savings Calculator [S]"
             >
               <Percent className="w-2.5 h-2.5" />
-              <span>30% Calc</span>
+              <span>Savings</span>
             </button>
           </div>
         </div>
 
+        <div className="font-bold text-white text-xs truncate">
+          {selectedPlan.name}
+        </div>
+        <div className="text-[10px] text-slate-400">
+          {selectedPlan.minutes} • {selectedPlan.broadbandSpeed}
+        </div>
+
         <div className="flex justify-between items-center py-0.5">
-          <span className="text-slate-400">Net Tariff (Ex. VAT):</span>
+          <span className="text-slate-400">Base Price:</span>
           <span className="font-bold text-slate-200 font-mono text-xs">
-            £42.99/mo
+            {selectedPlan.displayBase}
           </span>
         </div>
 
         <div className="flex justify-between items-center py-0.5">
           <span className="text-teal-400">UK VAT (20%):</span>
           <span className="font-bold text-teal-400 font-mono text-xs">
-            +£8.59/mo
+            +£{selectedPlan.vatAmount.toFixed(2)}/mo
           </span>
         </div>
 
         <div className="flex justify-between items-center py-1 border-t border-b border-slate-900 bg-emerald-950/20 px-1.5 rounded-lg">
-          <span className="text-emerald-300 font-bold">Total Monthly Bill:</span>
+          <span className="text-emerald-300 font-bold">Total Gross Bill:</span>
           <span className="font-black text-emerald-400 font-mono text-sm">
-            £51.58/mo
+            {selectedPlan.displayGross}
           </span>
         </div>
+
+        {/* Savings vs Current Bill */}
+        {comparison && comparison.isSaving && (
+          <div className="flex justify-between items-center py-0.5 text-[11px] bg-emerald-950/40 px-1.5 py-1 rounded text-emerald-300 font-semibold">
+            <span>Customer Saves:</span>
+            <span className="font-mono font-bold text-emerald-400">
+              £{comparison.monthlySavings.toFixed(2)}/mo (£{comparison.twoYearSavings.toFixed(2)} / 2 yrs)
+            </span>
+          </div>
+        )}
 
         <div className="flex justify-between items-center py-0.5 text-[11px]">
           <span className="text-slate-400 flex items-center gap-1">
             <HardDrive className="w-3 h-3 text-slate-400" />
-            <span>Digital Router:</span>
+            <span>Router Fee:</span>
           </span>
           <span className="font-semibold text-amber-300 font-mono">
-            £30 one-time
+            £30 (Adjusted future bill)
           </span>
         </div>
 
         <div className="flex justify-between items-center py-0.5 text-[11px]">
-          <span className="text-slate-400">Certified Engineer:</span>
+          <span className="text-slate-400">Engineer Visit:</span>
           <span className="font-bold text-emerald-400">
             FREE (£0)
           </span>
@@ -187,10 +290,10 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
         <div className="flex justify-between items-center py-0.5 text-[11px]">
           <span className="text-slate-400 flex items-center gap-1">
             <Clock className="w-3 h-3 text-indigo-400" />
-            <span>Price Guarantee:</span>
+            <span>Price Promise:</span>
           </span>
           <span className="font-bold text-indigo-300">
-            2 Years Locked
+            24 Months Locked
           </span>
         </div>
 
@@ -204,24 +307,24 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
                   : "text-rose-400 font-medium"
               }
             >
-              {customer.customerDecision === "YES" ? "✓ Upgraded (£51.58)" : "✕ Declined"}
+              {customer.customerDecision === "YES" ? `✓ Confirmed (${selectedPlan.displayGross})` : "✕ Declined"}
             </span>
           </div>
         )}
       </div>
 
-      {/* 3. LIVE CALL CHECKLIST */}
+      {/* 4. LIVE CALL CHECKLIST */}
       <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Call Milestones
+            9 Master Steps
           </span>
-          <span className="text-[10px] font-mono text-teal-400 font-bold">
+          <span className="text-[10px] font-mono text-sparta-400 font-bold">
             {checkedCount} / {checklist.length}
           </span>
         </div>
 
-        <div className="space-y-1.5 text-[11px]">
+        <div className="space-y-1 text-[11px]">
           {checklist.map((item, idx) => (
             <div
               key={idx}

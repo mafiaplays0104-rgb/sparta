@@ -1,31 +1,31 @@
 import { OfferConfig } from "../types";
 
 export const initialOfferConfig: OfferConfig = {
-  campaignName: "UK Telecom — Digital Fiber Landline & Broadband Upgrade",
+  campaignName: "Sparta Telecom — Copper-to-Fibre Digital Upgrade & Price Promise",
   enabled: true,
-  offerName: "Digital Landline & Fiber Broadband Bundle (£42.99 + 20% VAT = £51.58)",
-  advisorName: "Peter",
-  companyName: "[COMPANY NAME]",
-  approvedAgentId: "[APPROVED ID]",
+  offerName: "Sparta Telecom Digital Transition & 24-Month Price Promise Guarantee",
+  advisorName: "Alex",
+  companyName: "Sparta Telecom",
+  approvedAgentId: "ST-8924",
   maxDiscountPercent: 30,
   serviceUnchanged: true,
   contractUnchanged: true,
   equipmentUnchanged: false,
   paymentMethod: "DIRECT_DEBIT",
   authorisedText: {
-    companyName: "[COMPANY NAME]",
+    companyName: "Sparta Telecom",
     campaignReason:
-      "The old copper wires are being retired, and lines are being upgraded to the new fiber digital network with bundled high-speed fiber broadband and unlimited UK calls at £42.99 plus 20% VAT (£51.58 total), locked for 2 years.",
+      "All across the UK the old copper network is being retired and replaced by new fibre lines. Sparta Telecom operates on the same Openreach network, upgrading customer telephone lines without physical property disruption, with a 24-month price promise guarantee.",
     dataSourceExplanation:
-      "We contact registered telephone line users regarding the national digital line upgrade and copper retirement schedule.",
+      "We contact UK landline holders regarding the nationwide copper network retirement at their local telephone exchange.",
     verificationProcedure:
-      "Our senior verification officer confirms your new package price and address before sending your official confirmation letter and digital router.",
+      "A colleague takes a brief verbal confirmation of the customer's understanding of the switchover before arrangements and router dispatch.",
     privacyNotice:
-      "All information is processed securely for account verification and digital router delivery. We never ask for card PINs or passwords.",
+      "Under Data Protection Act 1998 (DPA 1998), confidential banking details are never requested over the phone. A Direct Debit mandate form from the customer's bank is dispatched by post for manual completion.",
     closingLines:
-      "To finalize everything, I will quickly connect you to our senior verification officer who will take just a minute to confirm your new package price and address before sending out your official confirmation letter and router.",
+      "Everything is completed from our side, and a colleague will take a 1-minute verbal confirmation so we can smoothly process the arrangements and router dispatch.",
   },
   scriptLock: true,
-  scriptVersion: "2.0.0",
+  scriptVersion: "3.0.0",
   dataRetentionDays: 90,
 };

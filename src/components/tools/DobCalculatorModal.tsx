@@ -235,9 +235,31 @@ export const DobCalculatorModal: React.FC<DobCalculatorModalProps> = ({
             </p>
 
             <div className="text-[10px] text-slate-500 pt-1 border-t border-slate-900 flex justify-between">
-              <span>Campaign Rule: 1943 – 1960</span>
+              <span>Campaign Rule: Pensioner / Upgrades</span>
               <span>Current Year: 2026</span>
             </div>
+          </div>
+
+          {/* Step 5 Pensioner Rapport Verbatim Box */}
+          <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/30 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-indigo-400" />
+                <span>STEP 5 APPROVED PENSIONER RAPPORT LINE</span>
+              </span>
+              <button
+                onClick={() => {
+                  const displayDate = mode === "EXACT_DOB" ? exactDobInput : (calculation.birthYear ? `1954` : `14/05/1952`);
+                  navigator.clipboard.writeText(`“${displayDate}? My goodness, you must have seen a lots of changes in this country by now... HAHAHA”`);
+                }}
+                className="text-[10px] text-indigo-200 hover:text-white bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-700/60"
+              >
+                Copy Line
+              </button>
+            </div>
+            <p className="text-xs text-indigo-100 italic leading-relaxed">
+              “{mode === "EXACT_DOB" ? exactDobInput : (calculation.birthYear ? String(calculation.birthYear) : "14/05/1952")}? My goodness, you must have seen a lots of changes in this country by now... HAHAHA”
+            </p>
           </div>
         </div>
 

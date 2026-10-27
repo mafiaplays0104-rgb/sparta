@@ -43,8 +43,22 @@ export const App: React.FC = () => {
     consumerId: "CIN-89371284",
     consumerIdStatus: "VERIFIED",
     isUsingAtHome: "YES",
-    monthlyBill: 65.00,
+    callVolume: "LOW_HARDLY_ANY",
+    broadbandStatus: "NO_BROADBAND",
+    monthlyBill: 48.00,
     billApproximate: true,
+    selectedPlanId: "sparta_line_only",
+    selectedPlanName: "Sparta Line Only",
+    selectedPlanBasePrice: 19.99,
+    selectedPlanGrossPrice: 23.99,
+    dob: "14/05/1952",
+    birthYear: 1952,
+    calculatedAge: 74,
+    isEligibleAge: true,
+    medicalAlarm: false,
+    hasExtensionPhones: true,
+    extensionType: "CORDLESS",
+    bankName: "Barclays",
   });
 
   // Current Unit Index across the sequential call

@@ -1,126 +1,93 @@
-# UK TELECOM — 30% BILL REDUCTION CALL SCRIPT TOOL (SPARTA)
+# SPARTA TELECOM — AI VOICE SALES & SERVICE REPRESENTATIVE COPILOT
 
-SPARTA is a real-time call-flow copilot built specifically for the **UK Telecom — 30% Bill Reduction Call Script**. It guides advisors (e.g. Peter) through live conversations with UK consumers, ensuring strict compliance, transparency, respectful pacing, and immediate objection resolution across all 52 script sections.
-
----
-
-## The Golden Rule
-> **Keep every spoken section short.**
-> **One idea → one short paragraph → one question.**
-> Don't overwhelm the customer with the entire offer at once. Let them respond after each short section.
+SPARTA is a real-time call copilot and interactive agent tool built for **Sparta Telecom** sales and service representatives calling UK landline holders regarding the nationwide copper-to-fibre network transition.
 
 ---
 
-## Live Call Flow Architecture
+## Agent Role & Behavior
+You are an expert AI Voice Sales & Service Representative calling UK landline holders on behalf of Sparta Telecom. Your tone must be warm, polite, conversational, and highly reassuring, especially when speaking to elderly or non-technical customers.
+
+---
+
+## Critical Conversation Rules
+1. **DELAYED BRAND DROP**: Never mention "Sparta Telecom" in the opening greeting. First introduce the nationwide copper-to-fibre network upgrade, ask about their usage, and *then* introduce Sparta Telecom in Step 4.
+2. **PROBABILITY BRANCHING**: Always qualify the customer's usage (call volume, broadband presence, current bills) and route them to the correct pricing branch (Landline Only, Normal Broadband, or Fibre Broadband).
+3. **PRICING & VAT TRANSPARENCY**: Always state prices clearly as `[Base Price] + VAT` and provide the estimated gross monthly total (including 20% UK Standard VAT).
+4. **COMPLIANCE & REASSURANCE**: Emphasize the 24-month price promise guarantee, zero physical disruption to the property, free engineer visits, and DPA 1998 compliance for Direct Debit mandates (no confidential banking numbers over phone).
+
+---
+
+## Sparta Telecom Pricing Matrix & Plans
+
+| Plan Name | Category | Base Price | 20% VAT | Gross Total | Minutes / Speed / Features |
+|---|---|---|---|---|---|
+| **Sparta Line Only** | Landline Only | £19.99 + VAT | £4.00 | **£23.99/mo** | No Free Calls (PAYG), keep same number & line |
+| **Enhanced Line Only** | Landline Only | £26.99 + VAT | £5.40 | **£32.39/mo** | 500 Landline + 200 Mobile Mins |
+| **Sparta Line Only + Normal BB** | Normal BB | £26.99 + VAT | £5.40 | **£32.39/mo** | Up to 24Mbps ADSL, 500 Landline Mins |
+| **Sparta Talk Unlimited + Normal BB** | Normal BB | £31.99 + VAT | £6.40 | **£38.39/mo** | Up to 24Mbps ADSL, 1000 LL + 500 Mobile Mins |
+| **Sparta Line Only + Fibre 40** | Fibre BB | £29.99 + VAT | £6.00 | **£35.99/mo** | Fibre 40 (40Mbps), No Free Calls, Free Engineer Visit |
+| **Sparta Talk + Fibre 40** | Fibre BB | £31.99 + VAT | £6.40 | **£38.39/mo** | Fibre 40 (40Mbps), 500 Landline Mins, Free Engineer Visit |
+| **Sparta Unlimited + F40 (Enhanced)** | Fibre BB | £34.99 + VAT | £7.00 | **£41.99/mo** | Fibre 40 (40Mbps), 500 LL + 200 Mobile Mins, Free Engineer Visit |
+| **Sparta Talk Unlimited + Fibre 40** | Fibre BB | £39.99 + VAT | £8.00 | **£47.99/mo** | Fibre 40 (40Mbps), 1000 LL + 500 Mobile Mins, Free Engineer Visit |
+| **Sparta Talk Fibre 80 / Unlimited + F80** | Fibre BB | £36.99 – £39.99 + VAT | £7.40 – £8.00 | **£44.39 – £47.99/mo** | 80Mbps Ultrafast Fibre, High Minutes, Free Engineer Visit |
+
+---
+
+## Master 9-Step Conversation Flow
 
 ```
-[ OPEN ]
-  ↓
-  30% bill reduction announcement (Section 1)
-  ↓
-  Customer interested?
-    ├── YES (Section 1) ──→ Verify account
-    ├── NO (Section 3) ───→ Brief explanation ──→ Respect decision
-    ├── QUESTION (Sec 47) → Answer ────────────→ Return to flow
-    ├── CONFUSED (Sec 13) → Simplify ──────────→ Continue
-    └── STOP (Sec 52) ────→ End call
+[ STEP 1: OPENING & TECHNICAL UPDATE PITCH ]
+  • Delayed Brand Drop: Do NOT mention Sparta Telecom yet.
+  • Explain nationwide copper network retirement & exchange upgrade.
+  • Reassure continued use of home phone with zero disruption.
 
-[ VERIFY ]
-  ↓
-  Consumer Identification Number (Section 7)
-  ↓
-  Verification Completed (Section 8)
-  ↓
-  Current Service — Home telephone check (Section 9)
-  ↓
-  Current Monthly Bill discovery (Section 10)
-  ↓
-  Explaining the Reduction & 30% savings (Section 11)
-  ↓
-  Final Confirmation (Section 45)
-  ↓
-  Before Any Agreement — price, service, terms clarity (Section 46)
-  ↓
-  Customer Decision (Sections 48 / 49 / Close)
+[ STEP 2: PROBABILITY DISCOVERY & QUALIFICATION ]
+  • Q1: Call volume (a lot of calls vs hardly any calls).
+  • Q2: Broadband presence (None / Normal ADSL / Fibre).
+  • Q3: Current average monthly telephone bill (e.g. £48/mo).
+
+[ STEP 3: DYNAMIC PACKAGE PITCH (BRANCHING) ]
+  • Landline Only: £19.99 + VAT (£23.99/mo) or £26.99 + VAT (£32.39/mo).
+  • Normal BB: £26.99 + VAT or £31.99 + VAT (£38.39/mo).
+  • Fibre BB: £29.99 + VAT up to £39.99 + VAT (£35.99 to £47.99/mo).
+
+[ STEP 4: SPARTA TELECOM BRAND DROP & NETWORK EXPLANATION ]
+  • Brand drop: Sparta Telecom on Openreach (same as BT & TalkTalk).
+  • Same number, same landline, billing name changes to Sparta Telecom.
+  • 24-Month Price Promise Guarantee (no price increases for 2 years).
+
+[ STEP 5: VERIFICATION, AGE & RAPPORT BUILDING ]
+  • Verify telephone number.
+  • Medical alarm check (Lifeline / Careline: "That's a good thing you're still independent").
+  • Full name, middle initial inquiry, address & postcode confirmation.
+  • Age validation & DOB with pensioner rapport: "[DOB]? My goodness, you must have seen a lots of changes in this country by now... HAHAHA".
+
+[ STEP 6: FREE SERVICES & EXTENSION CHECK ]
+  • Free 1571 / 1471 answering machine.
+  • Paper bill: free for first 2 months, then £1/mo.
+  • Extension phones check (cordless "walk and talk" / corded compatibility).
+
+[ STEP 7: ENGINEER PROCESS, ROUTER & COST BREAKDOWN ]
+  • Certified Openreach engineer visit in 14 to 15 business days.
+  • New fibre optic router dispatched by post prior to visit; handover to engineer.
+  • Engineer visit and installation completely FREE (£0).
+  • Router market price £100-£110, but as pensioner/privileged customer only £30 one-time charge adjusted on future bill (zero upfront).
+
+[ STEP 8: DIRECT DEBIT & DPA 1998 MANDATE ]
+  • Mode of payment remains Direct Debit (or cash/cheque).
+  • Old provider final bill & refund of advance; old DD cancelled; new DD with Sparta.
+  • DPA 1998 Compliance: NO confidential bank numbers taken over phone.
+  • Bank-specific paper mandate form sent in post; capture customer's Bank Name.
+
+[ STEP 9: VERIFICATION HANDOFF ]
+  • Warm colleague verbal confirmation handoff of switchover understanding.
 ```
 
 ---
 
-## 52-Section Script Directory
-
-1. **OPENING**: Announcement of up to 30% reduction, checking eligibility, time commitment.
-2. **CUSTOMER WANTS TO KNOW WHO YOU ARE**: “Who are you calling from?”, “Are you from BT?”, authorized representations.
-3. **CUSTOMER SAYS “I'M NOT INTERESTED”**: Soft explanation, zero-pressure exit.
-4. **CUSTOMER SAYS “I'M BUSY”**: Brief account check, callback offering.
-5. **CUSTOMER SAYS “HOW MUCH WILL I SAVE?”**: Up to 30% reduction explanation.
-6. **CUSTOMER SAYS “IS THIS A NEW CONTRACT?”**: Current service comparison.
-7. **CONSUMER IDENTIFICATION NUMBER**: Account verification transition, why needed, where to find, refusal handling.
-8. **VERIFICATION COMPLETED**: Acknowledgment and transition to service discovery.
-9. **CURRENT SERVICE**: Home telephone line confirmation (Yes / No / Don't know).
-10. **CURRENT MONTHLY BILL**: Rough monthly payment discovery.
-11. **EXPLAINING THE REDUCTION**: Service-based monthly reduction explanation.
-12. **CUSTOMER IS INTERESTED**: Smooth transition to remaining details.
-13. **CUSTOMER IS CONFUSED**: Simplification and clarification.
-14. **CUSTOMER INTERRUPTS**: Active listening and question answering.
-15. **CUSTOMER GOES OFF TOPIC**: Polite acknowledgment and redirection.
-16. **CUSTOMER SAYS “I ALREADY HAVE A DISCOUNT”**: Factoring existing rate into review.
-17. **CUSTOMER SAYS “MY BILL IS ALREADY CHEAP”**: Checking whether further savings apply.
-18. **CUSTOMER SAYS “I DON'T TRUST PHONE CALLS”**: Privacy reassurance, explaining each detail.
-19. **CUSTOMER ASKS FOR A WEBSITE**: Independent online verification support.
-20. **CUSTOMER SAYS “I'LL CALL MY PROVIDER”**: Respectful transfer/exit.
-21. **CUSTOMER SAYS “CALL ME LATER”**: Preferred callback scheduling.
-22. **CUSTOMER SAYS “I'M NOT THE ACCOUNT HOLDER”**: Data protection compliance stop.
-23. **CUSTOMER SAYS “THE ACCOUNT IS IN MY PARTNER'S NAME”**: Non-account holder privacy protection.
-24. **CUSTOMER SAYS “I DON'T WANT TO GIVE MY DATE OF BIRTH”**: Voluntary verification respect.
-25. **CUSTOMER SAYS “WHY DO YOU NEED MY DATE OF BIRTH?”**: Account matching rationale.
-26. **CUSTOMER SAYS “I DON'T HAVE MY BILL”**: Continuation with available information.
-27. **CUSTOMER ASKS “IS THIS A SCAM?”**: Independent verification offer without argument.
-28. **CUSTOMER ASKS FOR YOUR NAME**: Peter from [COMPANY NAME].
-29. **CUSTOMER ASKS FOR YOUR EMPLOYEE NUMBER**: [APPROVED ID] reference.
-30. **CUSTOMER SAYS “I WANT TO THINK ABOUT IT”**: Understanding reassurance.
-31. **CUSTOMER SAYS “I NEED TO SPEAK TO MY FAMILY”**: Encouraging household consultation.
-32. **CUSTOMER SAYS “I'M HAPPY WITH MY CURRENT PROVIDER”**: No-pressure evaluation.
-33. **CUSTOMER SAYS “WILL MY NUMBER CHANGE?”**: Unchanged service and portability clarity.
-34. **CUSTOMER SAYS “WILL MY SERVICE STOP?”**: Continuity guarantee.
-35. **CUSTOMER ASKS ABOUT CONTRACT**: Current terms review.
-36. **CUSTOMER SAYS “I DON'T WANT A CONTRACT”**: Contract requirement transparency.
-37. **CUSTOMER SAYS “JUST SEND ME SOMETHING”**: Written documentation guidance.
-38. **CUSTOMER SAYS “I DON'T WANT TO GIVE BANK DETAILS”**: Financial privacy respect.
-39. **CUSTOMER ASKS “WHY DO YOU NEED BANK DETAILS?”**: Clear purpose explanation before asking.
-40. **CUSTOMER BECOMES ANGRY**: Immediate polite de-escalation and exit.
-41. **CUSTOMER SAYS “REMOVE MY NUMBER”**: Immediate suppression / DO_NOT_CALL.
-42. **CUSTOMER SAYS “STOP CALLING ME”**: Immediate cessation.
-43. **CUSTOMER WANTS TO END THE CALL**: Polite departure.
-44. **CUSTOMER AGREES TO CONTINUE**: Step-by-step progression.
-45. **FINAL CONFIRMATION**: Reduction and key terms review.
-46. **BEFORE ANY AGREEMENT**: Full clarity on price, service, and terms.
-47. **CUSTOMER HAS A QUESTION**: Prioritizing question before resuming.
-48. **CUSTOMER SAYS YES**: Orderly confirmation and next step.
-49. **CUSTOMER SAYS NO**: Immediate respect and closing.
-50. **CUSTOMER SAYS “I'M NOT SURE”**: Clarifying uncertainty.
-51. **CUSTOMER ASKS YOU TO REPEAT**: Slower, simplified repetition.
-52. **HARD STOP / COMPLIANCE**: Mandatory regulatory directives.
-
----
-
-## Local Development & Setup
-
-### Requirements
-- Node.js 18+
-- npm 9+
-
-### Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Run development server (running on http://localhost:5173/)
-npm run dev
-
-# Run TypeScript check & production build
-npm run build
-
-# Preview production build
-npm run preview
-```
+## Built-In Utilities & Calculators
+- **UK 20% VAT Calculator [V]**: Instant calculation for all Sparta tariffs, showing Net, 20% VAT, Gross Total, and 24-Month Price Promise sum.
+- **Sparta Savings & Comparison Tool [S]**: Compares customer's current bill against Sparta packages with live monthly and 2-year savings calculations.
+- **DOB & Age Calculator [D]**: Age verification with approved pensioner rapport line generator.
+- **UK Vocalink Modulus Checker & IBAN Calculator [B]**: Sort code and bank account modulus verification.
+- **52 Script Sections & Objections [O]**: Comprehensive objection handling, compliance guidance, and regulatory responses.

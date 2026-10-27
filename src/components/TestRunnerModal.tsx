@@ -43,231 +43,254 @@ export const TestRunnerModal: React.FC<TestRunnerModalProps> = ({
   if (!isOpen) return null;
 
   const testCases: TestCase[] = [
+    // =========================================================================
+    // SPARTA TELECOM 9-STEP MASTER CONVERSATION SUITE
+    // =========================================================================
     {
-      id: "test_phase_1_intro",
-      name: "Phase 1: Introduction & Rapport Building",
-      category: "5_PHASE_SCRIPT",
-      description: "Verifies Phase 1 asks for Customer Name and states call regarding existing landline service.",
+      id: "test_sparta_step_1_delayed_brand_drop",
+      name: "Step 1: Delayed Brand Drop & Copper Retirement",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 1 introduces copper retirement exchange upgrade WITHOUT mentioning Sparta Telecom (Delayed Brand Drop).",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("PHASE_1_INTRODUCTION", { firstName: "John", lastName: "Smith" }, config);
+        const def = MasterScriptEngine.getStageDefinition("STEP_1_OPENING_TECHNICAL", { firstName: "John", lastName: "Smith" }, config);
         const text = def.getSayText({ firstName: "John", lastName: "Smith" }, config);
-        const pass = text.includes("Am I speaking with") && text.includes("existing landline service");
+        const hasDelayedBrand = !text.toLowerCase().includes("sparta telecom");
+        const hasCopperUpdate = text.includes("old copper network is gradually getting retired") && text.includes("technical update");
+        const pass = hasDelayedBrand && hasCopperUpdate;
         return {
           pass,
-          actual: text.slice(0, 85) + "...",
-          expected: "“Hello, good afternoon! Am I speaking with [Customer Name]?... calling regarding your existing landline service.”",
+          actual: hasDelayedBrand ? "Brand successfully delayed (no Sparta mention). Technical pitch present." : "FAILED: Brand dropped early!",
+          expected: "Delayed Brand Drop: No mention of Sparta Telecom. Explains nationwide copper-to-fibre upgrade.",
         };
       },
     },
     {
-      id: "test_phase_2_copper_hook",
-      name: "Phase 2: Transition Hook & Copper Retirement",
-      category: "5_PHASE_SCRIPT",
-      description: "Verifies Phase 2 explains copper retirement and reassures landline number stays same.",
+      id: "test_sparta_step_2_discovery",
+      name: "Step 2: Probability Discovery & Qualification",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 2 qualifies call volume, broadband presence, and current monthly bills.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("PHASE_2_TRANSITION_HOOK", {}, config);
+        const def = MasterScriptEngine.getStageDefinition("STEP_2_PROBABILITY_DISCOVERY", {}, config);
         const text = def.getSayText({}, config);
-        const pass = text.includes("old copper wires") && text.includes("fiber digital network") && text.includes("number and phone will remain exactly the same");
-        return {
-          pass,
-          actual: text.slice(0, 90) + "...",
-          expected: "“old copper wires... retired... upgrading lines to the new fiber digital network... phone will remain exactly the same.”",
-        };
-      },
-    },
-    {
-      id: "test_phase_3_bundle_pricing",
-      name: "Phase 3: Bundle & Price Guarantee (£42.99 + VAT = £51.58)",
-      category: "5_PHASE_SCRIPT",
-      description: "Verifies Phase 3 quotes £42.99 plus VAT (£51.58 total) and 2-year locked guarantee.",
-      run: () => {
-        const def = MasterScriptEngine.getStageDefinition("PHASE_3_BUNDLE_PRICE_GUARANTEE", {}, config);
-        const text = def.getSayText({}, config);
-        const pass = text.includes("£42.99 per month plus VAT") && text.includes("£51.58 total") && text.includes("two years");
-        return {
-          pass,
-          actual: text.slice(0, 95) + "...",
-          expected: "“£42.99 per month plus VAT (making it £51.58 total)... price promise guarantee locked in for the next two years”",
-        };
-      },
-    },
-    {
-      id: "test_phase_4_router_engineer",
-      name: "Phase 4: Hardware & Installation Details (£30 Router + Free Setup)",
-      category: "5_PHASE_SCRIPT",
-      description: "Verifies Phase 4 quotes one-time £30 router charge and free engineer setup.",
-      run: () => {
-        const def = MasterScriptEngine.getStageDefinition("PHASE_4_HARDWARE_INSTALLATION", {}, config);
-        const text = def.getSayText({}, config);
-        const pass = text.includes("one-time £30 charge") && text.includes("certified engineer's visit and installation charges will be completely free");
-        return {
-          pass,
-          actual: text.slice(0, 90) + "...",
-          expected: "“one-time £30 charge... certified engineer's visit and installation charges will be completely free”",
-        };
-      },
-    },
-    {
-      id: "test_phase_5_verification",
-      name: "Phase 5: Verification & Closing",
-      category: "5_PHASE_SCRIPT",
-      description: "Verifies Phase 5 connects to senior verification officer.",
-      run: () => {
-        const def = MasterScriptEngine.getStageDefinition("PHASE_5_VERIFICATION_CLOSING", {}, config);
-        const text = def.getSayText({}, config);
-        const pass = text.includes("senior verification officer") && text.includes("confirm your new package price and address");
-        return {
-          pass,
-          actual: text.slice(0, 90) + "...",
-          expected: "“connect you to our senior verification officer who will take just a minute to confirm your new package price and address”",
-        };
-      },
-    },
-    {
-      id: "test_vat_calculator_20pct",
-      name: "20% VAT Calculator: £42.99 -> £51.58 Total",
-      category: "CALCULATOR_TOOLS",
-      description: "Verifies CalculatorTools.calculateVat computes £42.99 net, £8.59 VAT, £51.58 gross.",
-      run: () => {
-        const vat = CalculatorTools.calculateVat(42.99, 20, 30);
         const pass =
-          vat !== null &&
-          vat.netAmount === 42.99 &&
-          vat.grossAmount === 51.58 &&
-          vat.vatAmount === 8.59 &&
-          vat.firstBillWithRouter === 81.58;
+          text.includes("do you make a lot of calls with this landline or do you hardly make any calls at all") &&
+          text.includes("do you also use any Broadband") &&
+          text.includes("how much is it that you usually pay for your telephone bills");
         return {
           pass,
-          actual: vat ? `Net: ${vat.formattedNet}, VAT: ${vat.formattedVat}, Total: ${vat.formattedGross}, Router 1st Mo: ${vat.formattedFirstBillWithRouter}` : "null",
-          expected: "Net: £42.99, VAT: £8.59, Total: £51.58, Router 1st Mo: £81.58",
+          actual: text.slice(0, 100) + "...",
+          expected: "Qualifies: 1. Call volume (a lot vs hardly any), 2. Broadband presence, 3. Average current bill.",
         };
       },
     },
     {
-      id: "test_stage_1_opening",
-      name: "Stage 1 Opening Script Verbatim Line",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 1 opens with Peter and 30% reduction statement.",
+      id: "test_sparta_step_3_dynamic_branching",
+      name: "Step 3: Dynamic Package Pitch (Landline Only vs Broadband)",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 3 dynamically pitches £19.99 + VAT for Landline Only or broadband tariffs with gross totals.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_1_OPENING", {}, config);
-        const text = def.getSayText({}, config);
-        const pass = text.includes("Peter") && text.includes("30% on your monthly bill");
+        const landlineDef = MasterScriptEngine.getStageDefinition("STEP_3_DYNAMIC_PACKAGE_PITCH", { broadbandStatus: "NO_BROADBAND" }, config);
+        const landlineText = landlineDef.getSayText({ broadbandStatus: "NO_BROADBAND" }, config);
+        const pass =
+          landlineText.includes("£19.99 + VAT") &&
+          landlineText.includes("£26.99 + VAT");
         return {
           pass,
-          actual: text.slice(0, 80) + "...",
-          expected: "“Hi, my name is Peter, and I'm calling regarding your telephone service. There's been a reduction of up to 30%...”",
+          actual: landlineText.slice(0, 110) + "...",
+          expected: "“...only £19.99 + VAT (Sparta Line Only) or £26.99 + VAT (Enhanced Line Only with 500 landline and 200 mobile minutes)...”",
         };
       },
     },
     {
-      id: "test_stage_2_consumer_id",
-      name: "Stage 2 Consumer ID Check",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 2 requests Consumer Identification Number.",
+      id: "test_sparta_step_4_brand_drop_openreach",
+      name: "Step 4: Sparta Brand Drop, Openreach & 24-Mo Guarantee",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 4 drops Sparta Telecom, explains Openreach network, and 24-month price promise guarantee.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_2_VERIFICATION_ID", {}, config);
+        const def = MasterScriptEngine.getStageDefinition("STEP_4_SPARTA_BRAND_DROP", {}, config);
         const text = def.getSayText({}, config);
-        const pass = text.includes("Consumer Identification Number");
+        const pass =
+          text.includes("Sparta Telecom") &&
+          text.includes("Openreach") &&
+          text.includes("24 months price promise guarantee") &&
+          text.includes("nothing will be changing physically");
         return {
           pass,
-          actual: text,
-          expected: "“Before I continue, I just need to verify the account. Could you please give me your Consumer Identification Number?”",
+          actual: text.slice(0, 110) + "...",
+          expected: "Brand drop Sparta Telecom, Openreach network, separate company, same number/line, 24 months price promise.",
         };
       },
     },
     {
-      id: "test_stage_4_current_service",
-      name: "Stage 4 Current Home Service Screening",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 4 asks if using service at home.",
+      id: "test_sparta_step_5_pensioner_rapport",
+      name: "Step 5: Verification, Lifeline & Pensioner Rapport",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 5 checks medical alarm (Lifeline/Careline), middle initial, and delivers approved DOB pensioner rapport.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_4_CURRENT_SERVICE", {}, config);
-        const text = def.getSayText({}, config);
-        const pass = text.includes("currently using this telephone service at your home");
+        const def = MasterScriptEngine.getStageDefinition("STEP_5_VERIFICATION_AGE_RAPPORT", { dob: "14/05/1952" }, config);
+        const text = def.getSayText({ dob: "14/05/1952" }, config);
+        const pass =
+          text.includes("lifeline or careline") &&
+          text.includes("middle initial") &&
+          text.includes("My goodness, you must have seen a lots of changes in this country by now... HAHAHA");
         return {
           pass,
-          actual: text,
-          expected: "“Can I just confirm, are you currently using this telephone service at your home?”",
+          actual: text.slice(text.indexOf("My goodness"), text.indexOf("HAHAHA") + 6),
+          expected: "“My goodness, you must have seen a lots of changes in this country by now... HAHAHA”",
         };
       },
     },
     {
-      id: "test_stage_5_current_bill",
-      name: "Stage 5 Current Monthly Bill Discovery",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 5 asks for rough monthly telephone cost.",
+      id: "test_sparta_step_6_free_services_extensions",
+      name: "Step 6: Free 1571 Answering Machine & Extension Phone Check",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 6 confirms free 1571/1471 answering machine, paper bill (2 months free then £1), and checks cordless/corded phones.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_5_CURRENT_BILL", {}, config);
+        const def = MasterScriptEngine.getStageDefinition("STEP_6_FREE_SERVICES_EXTENSIONS", {}, config);
         const text = def.getSayText({}, config);
-        const pass = text.includes("roughly how much you're currently paying each month");
+        const pass =
+          text.includes("1571 / 1471") &&
+          text.includes("paper bill") &&
+          text.includes("cordless or corded") &&
+          text.includes("you don't need to purchase any new phone");
         return {
           pass,
-          actual: text,
-          expected: "“Could you tell me roughly how much you're currently paying each month for your telephone service?”",
+          actual: text.slice(0, 100) + "...",
+          expected: "1571/1471 free service, paper bill free for 2 months then £1, extension walk and talk check.",
         };
       },
     },
     {
-      id: "test_stage_6_explaining_reduction",
-      name: "Stage 6 Explaining The Reduction",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 6 explains reduction in 2 concise sentences.",
+      id: "test_sparta_step_7_engineer_router_adjusted",
+      name: "Step 7: 14-15 Day Openreach Engineer & £30 Adjusted Router",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 7 explains Openreach engineer visit in 14-15 business days, free engineer setup, and £30 router adjusted on future bill (not upfront).",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_6_EXPLAINING_REDUCTION", {}, config);
+        const def = MasterScriptEngine.getStageDefinition("STEP_7_ENGINEER_ROUTER_COST", {}, config);
         const text = def.getSayText({}, config);
-        const pass = text.includes("available reduction could lower your monthly telephone cost");
+        const pass =
+          text.includes("14 to 15 business days") &&
+          text.includes("neither for the installation and nor for the engineer's visit") &&
+          text.includes("one time charge of 30 pounds") &&
+          text.includes("not in advance, once the upgrade will have happened then it will be adjusted in your future telephone bills");
         return {
           pass,
-          actual: text.slice(0, 90) + "...",
-          expected: "“Based on the information you've given me, the available reduction could lower your monthly telephone cost...”",
+          actual: text.slice(0, 110) + "...",
+          expected: "Openreach visit in 14-15 business days, free installation/visit, £30 router adjusted on future bills, zero upfront.",
         };
       },
     },
     {
-      id: "test_stage_7_final_confirmation",
-      name: "Stage 7 Final Confirmation",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 7 thanks customer and prepares for reduction terms.",
+      id: "test_sparta_step_8_dpa_mandate",
+      name: "Step 8: Direct Debit & DPA 1998 Paper Mandate",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 8 strictly enforces DPA 1998 compliance (NO bank details taken on phone; paper mandate form sent) and inquires bank name.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_7_FINAL_CONFIRMATION", {}, config);
+        const def = MasterScriptEngine.getStageDefinition("STEP_8_DIRECT_DEBIT_DPA1998", {}, config);
         const text = def.getSayText({}, config);
-        const pass = text.includes("Thank you for going through those details with me");
+        const pass =
+          text.includes("DPA 1998") &&
+          text.includes("not be requiring any of your confidential details or banking details over the phone") &&
+          text.includes("send you the direct debit mandate form of your bank") &&
+          text.includes("which bank you generally deal with");
         return {
           pass,
-          actual: text.slice(0, 90) + "...",
-          expected: "“Thank you for going through those details with me. I'll now explain the available reduction...”",
+          actual: text.slice(0, 110) + "...",
+          expected: "DPA 1998: No bank details taken on phone. Send bank mandate form by post. Inquire bank name.",
         };
       },
     },
     {
-      id: "test_stage_8_before_agreement",
-      name: "Stage 8 Before Any Agreement",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 8 ensures clarity on price, service, and terms.",
+      id: "test_sparta_step_9_handoff",
+      name: "Step 9: Colleague Verbal Confirmation Handoff",
+      category: "SPARTA_9_STEPS",
+      description: "Verifies Step 9 transitions customer to colleague for verbal switchover confirmation.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_8_BEFORE_AGREEMENT", {}, config);
+        const def = MasterScriptEngine.getStageDefinition("STEP_9_VERIFICATION_HANDOFF", {}, config);
         const text = def.getSayText({}, config);
-        const pass = text.includes("understand the price, service, and any relevant terms");
+        const pass =
+          text.includes("one of my colleagues will just be taking a verbal confirmation from you") &&
+          text.includes("Here's my colleague just have a word with him");
         return {
           pass,
-          actual: text.slice(0, 90) + "...",
-          expected: "“Before we go any further, I'll make sure you understand the price, service, and any relevant terms...”",
+          actual: text.slice(0, 100) + "...",
+          expected: "“...one of my colleagues will just be taking a verbal confirmation from you... Here's my colleague just have a word with him...”",
         };
       },
     },
     {
-      id: "test_stage_9_customer_decision",
-      name: "Stage 9 Customer Decision Question",
-      category: "MASTER_SCRIPT",
-      description: "Verifies Stage 9 asks directly whether to proceed with 30% reduction.",
+      id: "test_sparta_pricing_matrix_vat",
+      name: "Sparta Pricing Matrix: Exact 20% VAT Calculations",
+      category: "CALCULATOR_TOOLS",
+      description: "Verifies all Sparta Telecom packages calculate exact Base + 20% VAT = Gross total.",
       run: () => {
-        const def = MasterScriptEngine.getStageDefinition("STAGE_9_CUSTOMER_DECISION", {}, config);
-        const text = def.getSayText({}, config);
-        const pass = text.includes("Would you like to proceed with the 30% reduction");
+        const plans = CalculatorTools.getSpartaPlans();
+        const p19 = CalculatorTools.calculateVat(19.99, 20);
+        const p26 = CalculatorTools.calculateVat(26.99, 20);
+        const p31 = CalculatorTools.calculateVat(31.99, 20);
+        const p34 = CalculatorTools.calculateVat(34.99, 20);
+        const p39 = CalculatorTools.calculateVat(39.99, 20);
+
+        const pass =
+          plans.length === 9 &&
+          p19?.grossAmount === 23.99 &&
+          p26?.grossAmount === 32.39 &&
+          p31?.grossAmount === 38.39 &&
+          p34?.grossAmount === 41.99 &&
+          p39?.grossAmount === 47.99;
+
         return {
           pass,
-          actual: text,
-          expected: "“Would you like to proceed with the 30% reduction on your telephone service?”",
+          actual: `9 plans verified. £19.99->£${p19?.grossAmount}, £26.99->£${p26?.grossAmount}, £31.99->£${p31?.grossAmount}, £34.99->£${p34?.grossAmount}, £39.99->£${p39?.grossAmount}`,
+          expected: "9 plans: £19.99->£23.99, £26.99->£32.39, £31.99->£38.39, £34.99->£41.99, £39.99->£47.99",
+        };
+      },
+    },
+    {
+      id: "test_sparta_delayed_brand_rule",
+      name: "Compliance Rule 1: Delayed Brand Drop Verification",
+      category: "SPARTA_COMPLIANCE",
+      description: "Ensures Step 1 NEVER contains 'Sparta Telecom', but Step 4 properly introduces the brand.",
+      run: () => {
+        const step1 = MasterScriptEngine.getStageDefinition("STEP_1_OPENING_TECHNICAL", {}, config).getSayText({}, config);
+        const step4 = MasterScriptEngine.getStageDefinition("STEP_4_SPARTA_BRAND_DROP", {}, config).getSayText({}, config);
+        const pass = !step1.toLowerCase().includes("sparta telecom") && step4.includes("Sparta Telecom");
+        return {
+          pass,
+          actual: `Step 1 has Sparta: ${step1.toLowerCase().includes("sparta telecom")}, Step 4 has Sparta: ${step4.includes("Sparta Telecom")}`,
+          expected: "Step 1 has Sparta: false, Step 4 has Sparta: true",
+        };
+      },
+    },
+    {
+      id: "test_sparta_probability_branching_rule",
+      name: "Compliance Rule 2: Probability Branching Resolution",
+      category: "SPARTA_COMPLIANCE",
+      description: "Verifies CalculatorTools.determineProbabilityBranch routes correctly between Landline Only, Normal BB, and Fibre BB.",
+      run: () => {
+        const b1 = CalculatorTools.determineProbabilityBranch({ broadbandStatus: "NO_BROADBAND" });
+        const b2 = CalculatorTools.determineProbabilityBranch({ broadbandStatus: "NORMAL_BROADBAND" });
+        const b3 = CalculatorTools.determineProbabilityBranch({ broadbandStatus: "FIBRE_BROADBAND" });
+        const pass = b1 === "LANDLINE_ONLY" && b2 === "NORMAL_BROADBAND" && b3 === "FIBRE_BROADBAND";
+        return {
+          pass,
+          actual: `b1=${b1}, b2=${b2}, b3=${b3}`,
+          expected: "b1=LANDLINE_ONLY, b2=NORMAL_BROADBAND, b3=FIBRE_BROADBAND",
+        };
+      },
+    },
+    {
+      id: "test_sparta_dpa1998_rule",
+      name: "Compliance Rule 4: DPA 1998 Confidential Banking Shield",
+      category: "SPARTA_COMPLIANCE",
+      description: "Ensures Step 8 explicitly cites DPA 1998 and prohibits taking bank details over the phone.",
+      run: () => {
+        const step8 = MasterScriptEngine.getStageDefinition("STEP_8_DIRECT_DEBIT_DPA1998", {}, config).getSayText({}, config);
+        const pass = step8.includes("DPA 1998") && step8.includes("not be requiring any of your confidential details or banking details over the phone");
+        return {
+          pass,
+          actual: step8.slice(step8.indexOf("DPA 1998"), step8.indexOf("DPA 1998") + 90) + "...",
+          expected: "“...working here under DPA 1998, so we will not be requiring any of your confidential details or banking details over the phone...”",
         };
       },
     },
@@ -464,21 +487,21 @@ export const TestRunnerModal: React.FC<TestRunnerModalProps> = ({
       },
     },
     {
-      id: "test_live_call_flow_stages_order",
-      name: "Live Call Flow 9-Stage Order Integrity",
+      id: "test_sparta_master_stages_order",
+      name: "Sparta Telecom 9-Step Flow Sequence Integrity",
       category: "FLOW_INTEGRITY",
-      description: "Verifies the 9 stages follow OPEN -> VERIFY -> SERVICE -> BILL -> REDUCTION -> CONFIRMATION -> AGREEMENT -> DECISION.",
+      description: "Verifies the 9 Sparta steps follow OPENING -> DISCOVERY -> PITCH -> BRAND DROP -> VERIFY -> SERVICES -> ENGINEER -> DIRECT DEBIT -> HANDOFF.",
       run: () => {
         const expected = [
-          "STAGE_1_OPENING",
-          "STAGE_2_VERIFICATION_ID",
-          "STAGE_3_VERIFICATION_COMPLETED",
-          "STAGE_4_CURRENT_SERVICE",
-          "STAGE_5_CURRENT_BILL",
-          "STAGE_6_EXPLAINING_REDUCTION",
-          "STAGE_7_FINAL_CONFIRMATION",
-          "STAGE_8_BEFORE_AGREEMENT",
-          "STAGE_9_CUSTOMER_DECISION",
+          "STEP_1_OPENING_TECHNICAL",
+          "STEP_2_PROBABILITY_DISCOVERY",
+          "STEP_3_DYNAMIC_PACKAGE_PITCH",
+          "STEP_4_SPARTA_BRAND_DROP",
+          "STEP_5_VERIFICATION_AGE_RAPPORT",
+          "STEP_6_FREE_SERVICES_EXTENSIONS",
+          "STEP_7_ENGINEER_ROUTER_COST",
+          "STEP_8_DIRECT_DEBIT_DPA1998",
+          "STEP_9_VERIFICATION_HANDOFF",
         ];
         const pass = STAGES_LIST.length === expected.length && STAGES_LIST.every((s, i) => s === expected[i]);
         return {

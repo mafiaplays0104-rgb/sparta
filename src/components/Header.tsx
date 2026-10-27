@@ -46,14 +46,14 @@ export const Header: React.FC<HeaderProps> = ({
             SP
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-extrabold tracking-wider text-sm text-white">SPARTA</span>
+            <span className="font-extrabold tracking-wider text-sm text-white">SPARTA TELECOM</span>
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-              v{config.scriptVersion}
+              Voice AI Rep v{config.scriptVersion}
             </span>
             {config.scriptLock && (
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 flex items-center gap-0.5">
                 <ShieldCheck className="w-2.5 h-2.5" />
-                <span>LOCKED</span>
+                <span>COMPLIANT</span>
               </span>
             )}
           </div>
