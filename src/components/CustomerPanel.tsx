@@ -11,6 +11,8 @@ import {
   Building,
   AlertTriangle,
   CreditCard,
+  UserCheck,
+  Radio,
 } from "lucide-react";
 import { CustomerRecord, OfferConfig } from "../types";
 import { CalculatorTools } from "../engine/calculatorTools";
@@ -30,7 +32,7 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
   onOpenDobCalculator,
   onOpenBillCalculator,
   onOpenVatCalculator,
-  onOpenIbanCalculator,
+  onOpenIbanCalculator: _onOpenIbanCalculator,
 }) => {
   // Recommended plan based on customer's discovery answers
   const recommendedPlan = CalculatorTools.recommendSpartaPlan(customer);
@@ -38,48 +40,50 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
     ? CalculatorTools.getSpartaPlanById(customer.selectedPlanId) || recommendedPlan
     : recommendedPlan;
 
-  // Comparison against current bill if available
-  const comparison = customer.monthlyBill
-    ? CalculatorTools.calculateSpartaComparison(customer.monthlyBill, selectedPlan)
-    : null;
+  // Probability calculations matching the Telecom Script
+  const probSavings = CalculatorTools.calculateScriptProbabilitySavings(customer);
 
-  // 9 Master Steps Checklist
+  // 9 Master Steps Checklist matching the exact Telecom Script
   const checklist = [
     {
-      label: "1. Opening & Technical Pitch",
-      checked: !!(customer.firstName || customer.personalDetailsConfirmed),
+      label: "1. Opening (Opening 1 or 2)",
+      checked: !!(customer.selectedOpening || customer.personalDetailsConfirmed),
     },
     {
-      label: "2. Probability Qualified (Usage & Bill)",
+      label: "2. Probability Discovery (Calls, BB, Bill)",
       checked: !!(customer.callVolume || customer.broadbandStatus || customer.monthlyBill),
     },
     {
-      label: "3. Dynamic Package Pitch (+VAT)",
-      checked: !!(customer.selectedPlanId || customer.termsUnderstood),
+      label: "3. Transition & 24-Mo Savings Pitch",
+      checked: !!(customer.termsUnderstood || customer.pricePromiseAcknowledged),
     },
     {
-      label: "4. Sparta Brand Drop & Openreach",
-      checked: !!(customer.brandDropAcknowledged || customer.pricePromiseAcknowledged),
+      label: "4. Details & Primary Account Holder",
+      checked: customer.isPrimaryAccountHolder !== undefined || !!customer.addressConfirmed,
     },
     {
-      label: "5. Details & Pensioner Rapport",
-      checked: !!(customer.dob || customer.isEligibleAge),
+      label: "5. Direct Debit & Social Alarm Check",
+      checked: !!(customer.socialAlarmStatus || customer.paymentMethod),
     },
     {
-      label: "6. Free 1571 & Extension Checked",
-      checked: customer.hasExtensionPhones !== undefined,
+      label: "6. Free 1571 Voicemail & Paper Bill",
+      checked: !!(customer.callingFeaturesConfirmed || customer.paperBillConfirmed),
     },
     {
-      label: "7. Free Engineer & £30 Router",
-      checked: !!customer.routerFeeAdjustedAcknowledged,
+      label: "7. Sparta BT Platform & Independence",
+      checked: !!(customer.spartaBtPlatformAcknowledged || customer.brandDropAcknowledged),
     },
     {
-      label: "8. Direct Debit & DPA 1998 Form",
-      checked: !!(customer.bankName || customer.dpaMandateFormRequested),
+      label: "8. Compliance Day Verification",
+      checked: !!customer.isDayVerified,
     },
     {
-      label: "9. Colleague Verbal Handoff",
-      checked: !!(customer.finalConfirmationGiven || customer.customerDecision === "YES"),
+      label: "9. Verification Officer Handoff",
+      checked: !!(
+        customer.verificationOfficerHandoff ||
+        customer.finalConfirmationGiven ||
+        customer.customerDecision === "YES"
+      ),
     },
   ];
 
@@ -87,7 +91,7 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
 
   return (
     <aside className="bg-slate-900/60 backdrop-blur-md border-l border-slate-800/80 p-3.5 flex flex-col h-full overflow-y-auto space-y-3.5 select-none text-xs">
-      {/* 1. CUSTOMER IDENTITY & ACCOUNT */}
+      {/* 1. CUSTOMER IDENTITY & DETAILS */}
       <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -101,18 +105,18 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
 
         <div className="font-bold text-white text-sm">
           {customer.firstName || customer.lastName
-            ? `${customer.title || "Mr/Mrs"} ${customer.firstName || ""} ${customer.middleInitial ? customer.middleInitial + ". " : ""}${customer.lastName || ""}`
-            : "Customer"}
+            ? `${customer.title || "Mr"} ${customer.firstName || ""} ${customer.lastName || "Campbell"}`
+            : "Mr Campbell"}
         </div>
         <div className="text-slate-300 font-mono text-xs">
           {customer.address || "14 Highfield Road"}, {customer.postcode || "B33 8TH"}
         </div>
         <div className="text-slate-400 font-mono text-xs flex items-center gap-1">
           <Phone className="w-3 h-3 text-sparta-400" />
-          <span>{customer.contactNumber || "0121 496 0123"}</span>
+          <span>{customer.contactNumber || "123455466"}</span>
         </div>
 
-        {/* DOB & Pensioner Rapport */}
+        {/* DOB */}
         <div className="text-[11px] text-indigo-300 pt-1 border-t border-slate-900 flex items-center justify-between">
           <span>DOB: {customer.dob || "14/05/1952"}</span>
           <button
@@ -123,91 +127,126 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
           </button>
         </div>
 
-        {/* Medical Alarm check */}
+        {/* Primary Account Holder & Decision Maker */}
         <div className="text-[11px] pt-1 border-t border-slate-900 flex items-center justify-between">
-          <span className="text-slate-400">Medical Alarm (Lifeline):</span>
+          <span className="text-slate-400">Primary Decision Maker:</span>
           <span
             className={`font-semibold ${
-              customer.medicalAlarm ? "text-amber-400" : "text-emerald-400"
+              customer.isPrimaryAccountHolder
+                ? "text-emerald-400"
+                : customer.isPrimaryAccountHolder === false
+                ? "text-rose-400"
+                : "text-amber-400"
             }`}
           >
-            {customer.medicalAlarm ? "Yes (Careline)" : "None (Independent)"}
+            {customer.isPrimaryAccountHolder
+              ? "✓ Confirmed"
+              : customer.isPrimaryAccountHolder === false
+              ? "✕ Not Primary"
+              : "Pending Verification"}
           </span>
         </div>
 
-        {/* Extension phones */}
-        {customer.extensionType && (
-          <div className="text-[11px] pt-1 border-t border-slate-900 flex items-center justify-between">
-            <span className="text-slate-400">Extension Phones:</span>
-            <span className="font-semibold text-slate-200">
-              {customer.extensionType === "CORDLESS"
-                ? "Cordless (Compatible)"
-                : customer.extensionType === "CORDED"
-                ? "Corded (Engineer Setup)"
-                : "None"}
-            </span>
+        {/* Social Alarm / Pendant Check */}
+        <div className="text-[11px] pt-1 border-t border-slate-900 flex items-center justify-between">
+          <span className="text-slate-400">Social Alarm / Pendant:</span>
+          <span
+            className={`font-semibold ${
+              customer.socialAlarmStatus === "NO"
+                ? "text-emerald-400"
+                : customer.socialAlarmStatus
+                ? "text-cyan-400"
+                : "text-slate-400"
+            }`}
+          >
+            {customer.socialAlarmStatus === "NO"
+              ? "No Alarm (None)"
+              : customer.socialAlarmStatus === "YES_COPPER"
+              ? "Copper Line Alarm"
+              : customer.socialAlarmStatus === "YES_DIGITAL_SOCKET"
+              ? "Wall Socket (Verified)"
+              : "Unchecked"}
+          </span>
+        </div>
+
+        {/* Compliance Day Verification */}
+        {customer.isDayVerified && (
+          <div className="text-[11px] pt-1 border-t border-slate-900 flex items-center justify-between text-emerald-400">
+            <span>Day of Week Checked:</span>
+            <span className="font-bold">✓ Spot on ({customer.dayVerificationAnswer || "Verified"})</span>
           </div>
         )}
       </div>
 
-      {/* 2. PROBABILITY QUALIFICATION & USAGE */}
-      <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
+      {/* 2. PROBABILITY PROFILE & SAVINGS */}
+      <div className="space-y-1.5 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Probability Profile
           </span>
           <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
-            {CalculatorTools.determineProbabilityBranch(customer).replace("_", " ")}
+            {probSavings.branch.replace("_", " ")}
           </span>
         </div>
 
         <div className="flex justify-between items-center py-0.5 text-[11px]">
-          <span className="text-slate-400">Call Volume:</span>
+          <span className="text-slate-400">Home Phone Usage:</span>
           <span className="font-semibold text-slate-200">
-            {customer.callVolume === "LOW_HARDLY_ANY"
-              ? "Hardly Any / Low"
-              : customer.callVolume === "HIGH_FREQUENT"
-              ? "A Lot / Frequent"
-              : "Average Usage"}
+            {customer.callVolume === "HIGH_FREQUENT"
+              ? "Quite a lot for calls"
+              : customer.callVolume === "LOW_HARDLY_ANY"
+              ? "Mostly incoming calls"
+              : "Standard Usage"}
           </span>
         </div>
 
         <div className="flex justify-between items-center py-0.5 text-[11px]">
-          <span className="text-slate-400">Broadband:</span>
+          <span className="text-slate-400">Broadband on Same Line:</span>
           <span className="font-semibold text-slate-200">
             {customer.broadbandStatus === "FIBRE_BROADBAND"
-              ? "Fibre 40 / 80"
+              ? "Yes (Fibre Broadband)"
               : customer.broadbandStatus === "NORMAL_BROADBAND"
-              ? "Normal BB (24Mbps)"
-              : "None (Landline Only)"}
+              ? "Yes (Running on line)"
+              : "No (Landline Only)"}
           </span>
         </div>
 
         <div className="flex justify-between items-center py-0.5 text-[11px]">
-          <span className="text-slate-400">Current Average Bill:</span>
+          <span className="text-slate-400">Current Monthly Bill:</span>
           <span className="font-bold text-amber-300 font-mono">
-            {customer.monthlyBill ? `£${customer.monthlyBill.toFixed(2)}/mo` : "Not provided"}
+            {customer.monthlyBill ? `£${customer.monthlyBill.toFixed(2)}/mo` : "Around £40-£60"}
           </span>
         </div>
 
-        {customer.bankName && (
-          <div className="flex justify-between items-center py-0.5 text-[11px] pt-1 border-t border-slate-900">
-            <span className="text-slate-400 flex items-center gap-1">
-              <Building className="w-3 h-3 text-cyan-400" />
-              <span>DPA Bank Form:</span>
-            </span>
-            <span className="font-bold text-cyan-300">
-              {customer.bankName}
-            </span>
+        {customer.billOrProviderConfused && (
+          <div className="bg-amber-950/40 p-2 rounded-xl border border-amber-800/60 text-amber-300 text-[10px] flex items-center gap-1.5">
+            <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+            <span>Note: Customer uncertain about exact bill/provider. Soft pacing applied.</span>
           </div>
         )}
+
+        {/* Calculated Monthly & 2-Year Savings */}
+        <div className="bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-800/50 mt-1">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-emerald-300 font-medium">Digital Package:</span>
+            <span className="font-bold text-white font-mono">£{probSavings.formattedMonthlyPrice}/mo</span>
+          </div>
+          <div className="flex justify-between items-center text-xs mt-1">
+            <span className="text-emerald-300 font-medium">Monthly Savings:</span>
+            <span className="font-black text-emerald-400 font-mono">£{probSavings.formattedMonthlySavings}/mo</span>
+          </div>
+          <div className="flex justify-between items-center text-xs mt-1 pt-1 border-t border-emerald-800/40">
+            <span className="text-sparta-300 font-bold">Total 2-Year Savings:</span>
+            <span className="font-black text-sparta-400 font-mono">£{probSavings.formattedTwoYearSavings}</span>
+          </div>
+        </div>
       </div>
 
       {/* 3. REVISED SPARTA TELECOM PACKAGE */}
       <div className="space-y-1.5 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-sparta-400">
-            Sparta Package
+            Sparta Digital Package
           </span>
           <div className="flex items-center gap-1">
             {onOpenVatCalculator && (
@@ -236,88 +275,46 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
           {selectedPlan.name}
         </div>
         <div className="text-[10px] text-slate-400">
-          {selectedPlan.minutes} • {selectedPlan.broadbandSpeed}
-        </div>
-
-        <div className="flex justify-between items-center py-0.5">
-          <span className="text-slate-400">Base Price:</span>
-          <span className="font-bold text-slate-200 font-mono text-xs">
-            {selectedPlan.displayBase}
-          </span>
-        </div>
-
-        <div className="flex justify-between items-center py-0.5">
-          <span className="text-teal-400">UK VAT (20%):</span>
-          <span className="font-bold text-teal-400 font-mono text-xs">
-            +£{selectedPlan.vatAmount.toFixed(2)}/mo
-          </span>
-        </div>
-
-        <div className="flex justify-between items-center py-1 border-t border-b border-slate-900 bg-emerald-950/20 px-1.5 rounded-lg">
-          <span className="text-emerald-300 font-bold">Total Gross Bill:</span>
-          <span className="font-black text-emerald-400 font-mono text-sm">
-            {selectedPlan.displayGross}
-          </span>
-        </div>
-
-        {/* Savings vs Current Bill */}
-        {comparison && comparison.isSaving && (
-          <div className="flex justify-between items-center py-0.5 text-[11px] bg-emerald-950/40 px-1.5 py-1 rounded text-emerald-300 font-semibold">
-            <span>Customer Saves:</span>
-            <span className="font-mono font-bold text-emerald-400">
-              £{comparison.monthlySavings.toFixed(2)}/mo (£{comparison.twoYearSavings.toFixed(2)} / 2 yrs)
-            </span>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center py-0.5 text-[11px]">
-          <span className="text-slate-400 flex items-center gap-1">
-            <HardDrive className="w-3 h-3 text-slate-400" />
-            <span>Router Fee:</span>
-          </span>
-          <span className="font-semibold text-amber-300 font-mono">
-            £30 (Adjusted future bill)
-          </span>
+          Exact phone number &amp; line unchanged
         </div>
 
         <div className="flex justify-between items-center py-0.5 text-[11px]">
-          <span className="text-slate-400">Engineer Visit:</span>
+          <span className="text-slate-400">1471 / 1571 Voicemail:</span>
           <span className="font-bold text-emerald-400">
             FREE (£0)
           </span>
         </div>
 
         <div className="flex justify-between items-center py-0.5 text-[11px]">
-          <span className="text-slate-400 flex items-center gap-1">
-            <Clock className="w-3 h-3 text-indigo-400" />
-            <span>Price Promise:</span>
-          </span>
-          <span className="font-bold text-indigo-300">
-            24 Months Locked
+          <span className="text-slate-400">Paper Itemized Bill:</span>
+          <span className="font-semibold text-slate-200">
+            Free 2 mo, then £1 (deactivate anytime)
           </span>
         </div>
 
-        {customer.customerDecision && (
-          <div className="flex justify-between py-0.5 items-center pt-1 border-t border-slate-900">
-            <span className="text-slate-400">Decision:</span>
-            <span
-              className={
-                customer.customerDecision === "YES"
-                  ? "text-emerald-400 font-bold"
-                  : "text-rose-400 font-medium"
-              }
-            >
-              {customer.customerDecision === "YES" ? `✓ Confirmed (${selectedPlan.displayGross})` : "✕ Declined"}
-            </span>
-          </div>
-        )}
+        <div className="flex justify-between items-center py-0.5 text-[11px]">
+          <span className="text-slate-400">Platform:</span>
+          <span className="font-semibold text-indigo-300">
+            BT Platform (Separate Company)
+          </span>
+        </div>
+
+        <div className="flex justify-between items-center py-0.5 text-[11px]">
+          <span className="text-slate-400 flex items-center gap-1">
+            <Clock className="w-3 h-3 text-indigo-400" />
+            <span>Agreement Duration:</span>
+          </span>
+          <span className="font-bold text-indigo-300">
+            24 Months Effective
+          </span>
+        </div>
       </div>
 
       {/* 4. LIVE CALL CHECKLIST */}
       <div className="space-y-1 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            9 Master Steps
+            Script Progression
           </span>
           <span className="text-[10px] font-mono text-sparta-400 font-bold">
             {checkedCount} / {checklist.length}

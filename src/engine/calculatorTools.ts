@@ -489,4 +489,43 @@ export class CalculatorTools {
       speechPitch,
     };
   }
+
+  /**
+   * Probability savings calculation matching the exact Telecom Script format:
+   * £[Insert monthly price], £[Insert monthly savings], £[Insert total 2-year savings], £___, £_____
+   */
+  public static calculateScriptProbabilitySavings(customer: CustomerRecord): {
+    currentBill: number;
+    monthlyPrice: number;
+    formattedMonthlyPrice: string;
+    monthlySavings: number;
+    formattedMonthlySavings: string;
+    twoYearSavings: number;
+    formattedTwoYearSavings: string;
+    plan: SpartaPlan;
+    branch: SpartaPlanCategory;
+  } {
+    const plan = this.recommendSpartaPlan(customer);
+    const branch = this.determineProbabilityBranch(customer);
+    const currentBill =
+      typeof customer.monthlyBill === 'number' && customer.monthlyBill > 0
+        ? customer.monthlyBill
+        : 50.0;
+
+    const monthlyPrice = plan.grossPrice;
+    const monthlySavings = Math.max(0, Math.round((currentBill - monthlyPrice) * 100) / 100);
+    const twoYearSavings = Math.round(monthlySavings * 24 * 100) / 100;
+
+    return {
+      currentBill,
+      monthlyPrice,
+      formattedMonthlyPrice: monthlyPrice.toFixed(2),
+      monthlySavings,
+      formattedMonthlySavings: monthlySavings.toFixed(2),
+      twoYearSavings,
+      formattedTwoYearSavings: twoYearSavings.toFixed(2),
+      plan,
+      branch,
+    };
+  }
 }

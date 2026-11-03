@@ -12,6 +12,10 @@ import {
   HelpCircle,
   ShieldCheck,
   Receipt,
+  PhoneCall,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { ScriptUnit } from "../engine/scriptUnitEngine";
 import { CustomerRecord, OfferConfig } from "../types";
@@ -58,8 +62,23 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [customBillInput, setCustomBillInput] = useState("");
+  const [useLiveNumbersInScript, setUseLiveNumbersInScript] = useState(false);
 
-  const sayText = overrideSayText || unit.getText(customer, config);
+  // Compute live probability numbers
+  const probSavings = CalculatorTools.calculateScriptProbabilitySavings(customer);
+
+  // Raw say text from unit or override
+  let sayText = overrideSayText || unit.getText(customer, config);
+
+  // If live numbers mode is enabled on the pitch unit, populate exact placeholders
+  if (useLiveNumbersInScript && (unit.id === "s3_u1" || unit.id === "s3_u2")) {
+    sayText = sayText
+      .replace("£[Insert monthly price]", `£${probSavings.formattedMonthlyPrice}`)
+      .replace("£[Insert monthly savings]", `£${probSavings.formattedMonthlySavings}`)
+      .replace("£[Insert total 2-year savings]", `£${probSavings.formattedTwoYearSavings}`)
+      .replace("£___", `£${probSavings.formattedMonthlySavings}`)
+      .replace("£_____", `£${probSavings.formattedTwoYearSavings}`);
+  }
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sayText);
@@ -69,9 +88,13 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
 
   const isFinalUnit = unitIndexOverall === totalUnitsOverall - 1;
 
+  // Day of week calculation for compliance step
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDayName = daysOfWeek[new Date().getDay()];
+
   return (
     <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 bg-slate-950 text-slate-100 overflow-y-auto">
-      <div className="w-full max-w-3xl flex flex-col justify-between min-h-[480px] bg-slate-900/90 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl relative transition-all duration-150">
+      <div className="w-full max-w-3xl flex flex-col justify-between min-h-[500px] bg-slate-900/90 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl relative transition-all duration-150">
         {/* 1. PROGRESS BAR / STAGE HEADER */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
           <div className="flex items-center gap-2">
@@ -105,19 +128,45 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
           </div>
         </div>
 
+        {/* OPENING SWITCHER (Stage 1) */}
+        {unit.stageNumber === 1 && (
+          <div className="w-full flex items-center justify-center gap-2 mb-3">
+            <button
+              onClick={() => onUpdateCustomer({ selectedOpening: "OPENING_1" })}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                customer.selectedOpening !== "OPENING_2"
+                  ? "bg-sparta-600 text-slate-950 border-sparta-400 shadow-md scale-105"
+                  : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white"
+              }`}
+            >
+              Opening 1 (Afternoon Feedback / 30% Off)
+            </button>
+            <button
+              onClick={() => onUpdateCustomer({ selectedOpening: "OPENING_2" })}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                customer.selectedOpening === "OPENING_2"
+                  ? "bg-sparta-600 text-slate-950 border-sparta-400 shadow-md scale-105"
+                  : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white"
+              }`}
+            >
+              Opening 2 (Morning Digital Transition)
+            </button>
+          </div>
+        )}
+
         {/* 2. SCRIPT UNIT CARD — THE PROMINENT CENTERPIECE */}
-        <div className="flex-1 flex flex-col justify-center items-center text-center my-4 px-2 select-text">
+        <div className="flex-1 flex flex-col justify-center items-center text-center my-3 px-2 select-text">
           <span className="text-[10px] font-black uppercase tracking-widest text-sparta-500 mb-3 bg-sparta-950 px-2.5 py-0.5 rounded-full border border-sparta-800/80">
             SAY THIS
           </span>
 
-          <h2 className="text-2xl sm:text-3xl md:text-3xl font-medium text-white leading-relaxed tracking-normal whitespace-pre-line max-w-2xl font-sans">
+          <h2 className="text-xl sm:text-2xl md:text-2xl font-medium text-white leading-relaxed tracking-normal whitespace-pre-line max-w-2xl font-sans text-left">
             {sayText}
           </h2>
 
           {/* Expected Customer Reply Banner from Script */}
           {unit.expectedCustomerReply && (
-            <div className="mt-4 px-4 py-2.5 rounded-2xl bg-slate-950/90 border border-amber-500/30 max-w-xl text-left flex items-start gap-2.5 shadow-sm">
+            <div className="mt-4 px-4 py-2.5 rounded-2xl bg-slate-950/90 border border-amber-500/30 max-w-xl text-left flex items-start gap-2.5 shadow-sm w-full">
               <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 flex-shrink-0 mt-0.5 font-mono">
                 Customer Reply
               </span>
@@ -129,84 +178,93 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
 
           {/* Subnote if applicable */}
           {unit.subNote && (
-            <p className="mt-3 text-xs text-slate-400 italic max-w-xl">
+            <p className="mt-2.5 text-xs text-slate-400 italic max-w-xl text-center">
               {unit.subNote}
             </p>
           )}
 
           {/* PAUSE & LISTEN BADGE */}
           {unit.isPauseAndListen && (
-            <div className="mt-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-950/90 border border-sparta-500/40 text-sparta-300 text-xs font-bold tracking-wider animate-pulse shadow-sm">
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-950/90 border border-sparta-500/40 text-sparta-300 text-xs font-bold tracking-wider animate-pulse shadow-sm">
               <span className="w-2 h-2 rounded-full bg-sparta-400"></span>
               <span>PAUSE &amp; LISTEN</span>
             </div>
           )}
         </div>
 
-        {/* 3. CONTEXTUAL INLINE INPUTS / QUICK BUTTONS */}
+        {/* 3. CONTEXTUAL INLINE INPUTS / PROBABILITY HELPERS */}
         <div className="my-2 flex flex-col items-center space-y-2.5">
-          {/* Dynamic Sparta Package Helper */}
-          {unit.inputType === "VAT_CALCULATOR" && (() => {
-            const branch = CalculatorTools.determineProbabilityBranch(customer);
-            const recPlan = CalculatorTools.recommendSpartaPlan(customer);
-            const plan = customer.selectedPlanId
-              ? CalculatorTools.getSpartaPlanById(customer.selectedPlanId) || recPlan
-              : recPlan;
-
-            return (
-              <div className="w-full max-w-xl bg-slate-950/95 p-3.5 rounded-2xl border border-teal-500/40 flex flex-col gap-2.5 shadow-xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Receipt className="w-4 h-4 text-teal-400" />
-                    <span className="text-xs font-bold text-white">
-                      Recommended: <span className="text-sparta-300 font-bold">{plan.name}</span>
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-800 uppercase font-mono">
-                    {branch.replace("_", " ")}
+          {/* PROBABILITY SAVINGS DISPLAY FOR STEP 3 */}
+          {(unit.id === "s3_u1" || unit.id === "s3_u2") && (
+            <div className="w-full max-w-xl bg-slate-950/95 p-3.5 rounded-2xl border border-teal-500/40 flex flex-col gap-2.5 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-teal-400" />
+                  <span className="text-xs font-bold text-white">
+                    Probability Package: <span className="text-sparta-300 font-bold">{probSavings.plan.name}</span>
                   </span>
                 </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-800 uppercase font-mono">
+                  {probSavings.branch.replace("_", " ")}
+                </span>
+              </div>
 
-                <div className="flex items-baseline justify-between pt-1 border-t border-slate-800">
-                  <span className="text-xs text-slate-300">
-                    Tariff: <span className="font-mono font-bold text-white">{plan.displayBase}</span> + 20% VAT
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800 text-center">
+                <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Monthly Price</span>
+                  <span className="text-sm font-black text-white font-mono">
+                    £{probSavings.formattedMonthlyPrice}
                   </span>
-                  <div className="text-right">
-                    <span className="text-base font-black text-emerald-400 font-mono">
-                      ≈ {plan.displayGross}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block font-sans">
-                      24-Mo Price Promise Lock
-                    </span>
-                  </div>
                 </div>
-
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                  <span className="text-[11px] text-slate-400">
-                    Includes: {plan.minutes} • {plan.broadbandSpeed}
+                <div className="bg-emerald-950/40 p-2 rounded-xl border border-emerald-800/60">
+                  <span className="text-[10px] text-emerald-300 block">Monthly Savings</span>
+                  <span className="text-sm font-black text-emerald-400 font-mono">
+                    £{probSavings.formattedMonthlySavings}
                   </span>
-                  {onOpenVatCalculator && (
-                    <button
-                      onClick={onOpenVatCalculator}
-                      className="px-3 py-1 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
-                    >
-                      <Receipt className="w-3.5 h-3.5" />
-                      <span>Pricing Matrix [V]</span>
-                    </button>
-                  )}
+                </div>
+                <div className="bg-sparta-950/60 p-2 rounded-xl border border-sparta-700/60">
+                  <span className="text-[10px] text-sparta-300 block">2-Year Total Savings</span>
+                  <span className="text-sm font-black text-sparta-400 font-mono">
+                    £{probSavings.formattedTwoYearSavings}
+                  </span>
                 </div>
               </div>
-            );
-          })()}
 
-          {/* Bill input helper */}
+              <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <button
+                  onClick={() => setUseLiveNumbersInScript((prev) => !prev)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                    useLiveNumbersInScript
+                      ? "bg-teal-500 text-slate-950"
+                      : "bg-slate-800 text-slate-300 hover:text-white"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>
+                    {useLiveNumbersInScript ? "✓ Live Numbers Active in Script" : "Insert Live Numbers into Script"}
+                  </span>
+                </button>
+
+                {onOpenVatCalculator && (
+                  <button
+                    onClick={onOpenVatCalculator}
+                    className="text-xs text-teal-400 hover:text-teal-300 underline font-bold"
+                  >
+                    Pricing Matrix [V]
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Bill input helper (Stage 2 Unit 3) */}
           {unit.inputType === "BILL_INPUT" && (
             <div className="w-full max-w-md bg-slate-950/90 p-3 rounded-2xl border border-slate-800 flex flex-col items-center gap-2">
               <div className="flex items-center gap-2 w-full">
                 <span className="text-xs text-slate-400 font-medium">Customer states:</span>
                 <input
                   type="text"
-                  placeholder="e.g. £48 or 48.00"
+                  placeholder="e.g. £40, £50, £60"
                   value={customBillInput}
                   onChange={(e) => setCustomBillInput(e.target.value)}
                   className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-sm font-bold text-white font-mono focus:border-sparta-500 focus:outline-none"
@@ -231,53 +289,88 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
                   className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold underline"
                 >
                   <Percent className="w-3 h-3" />
-                  <span>Compare with Sparta Plans &amp; Calculate Savings</span>
+                  <span>Calculate 30% Savings [S]</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* Consumer Identification Number helper */}
-          {unit.inputType === "CUSTOMER_ID_INPUT" && (
-            <div className="w-full max-w-md bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-sparta-400" />
-              <input
-                type="text"
-                placeholder="Enter Consumer ID from bill..."
-                value={customer.consumerId || customer.customerId || ""}
-                onChange={(e) =>
-                  onUpdateCustomer({
-                    consumerId: e.target.value.toUpperCase(),
-                    customerId: e.target.value.toUpperCase(),
-                    consumerIdStatus: "VERIFIED",
-                    customerIdStatus: "VERIFIED",
-                  })
-                }
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs font-mono font-bold text-white uppercase focus:border-sparta-500 focus:outline-none"
-              />
-            </div>
-          )}
-
-          {/* Optional DOB & Pensioner Rapport helper */}
-          {unit.inputType === "DOB_INPUT" && (
-            <div className="w-full max-w-lg bg-slate-950/90 p-3 rounded-2xl border border-indigo-500/30 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-indigo-400" />
-                  <span className="text-xs text-slate-200 font-bold">
-                    DOB: <span className="text-indigo-300 font-mono">{customer.dob || "14/05/1952"}</span>
-                  </span>
-                </div>
+          {/* Social Alarm / Pendant Helper (Stage 5 Unit 2) */}
+          {unit.inputType === "ALARM_SELECT" && (
+            <div className="w-full max-w-xl bg-slate-950/90 p-3 rounded-2xl border border-slate-800 flex flex-col gap-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">
+                Customer Alarm Assessment:
+              </span>
+              <div className="grid grid-cols-3 gap-2">
                 <button
-                  onClick={onOpenDobCalculator}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2.5 py-1 rounded-lg text-xs"
+                  onClick={() => onUpdateCustomer({ socialAlarmStatus: "NO", medicalAlarm: false })}
+                  className={`p-2 rounded-xl text-xs font-bold border transition-all text-left ${
+                    customer.socialAlarmStatus === "NO"
+                      ? "bg-emerald-950/80 border-emerald-500 text-emerald-300"
+                      : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700"
+                  }`}
                 >
-                  Age Tool [D]
+                  <div className="text-[10px] text-slate-500 uppercase">Option 1</div>
+                  [If NO]: Move right along
+                </button>
+                <button
+                  onClick={() => onUpdateCustomer({ socialAlarmStatus: "YES_COPPER", medicalAlarm: true })}
+                  className={`p-2 rounded-xl text-xs font-bold border transition-all text-left ${
+                    customer.socialAlarmStatus === "YES_COPPER"
+                      ? "bg-amber-950/80 border-amber-500 text-amber-300"
+                      : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="text-[10px] text-slate-500 uppercase">Option 2</div>
+                  [If YES & Copper]: Smooth Transition
+                </button>
+                <button
+                  onClick={() => onUpdateCustomer({ socialAlarmStatus: "YES_DIGITAL_SOCKET", medicalAlarm: true })}
+                  className={`p-2 rounded-xl text-xs font-bold border transition-all text-left ${
+                    customer.socialAlarmStatus === "YES_DIGITAL_SOCKET"
+                      ? "bg-cyan-950/80 border-cyan-500 text-cyan-300"
+                      : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="text-[10px] text-slate-500 uppercase">Option 3</div>
+                  [If YES & Digital]: Wall socket verified
                 </button>
               </div>
-              <p className="text-[11px] text-indigo-200/90 italic border-t border-slate-800 pt-1">
-                💬 Approved line: “{customer.dob || "14/05/1952"}? My goodness, you must have seen a lots of changes in this country by now... HAHAHA”
-              </p>
+            </div>
+          )}
+
+          {/* Compliance Day Verification Helper (Stage 8) */}
+          {unit.id === "s8_u1" && (
+            <div className="w-full max-w-md bg-slate-950/90 p-3 rounded-2xl border border-slate-800 flex flex-col items-center gap-2">
+              <span className="text-xs text-slate-400 font-bold">
+                Customer's answer to day of week:
+              </span>
+              <div className="flex items-center gap-2">
+                {["Sunday", "Monday", "Tuesday", currentDayName].filter((v, i, a) => a.indexOf(v) === i).map((day) => (
+                  <button
+                    key={day}
+                    onClick={() =>
+                      onUpdateCustomer({
+                        dayVerificationAnswer: day,
+                        isDayVerified: true,
+                      })
+                    }
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      customer.dayVerificationAnswer === day
+                        ? "bg-emerald-600 text-white border-emerald-400"
+                        : "bg-slate-900 text-slate-300 border-slate-800 hover:text-white"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+              {customer.isDayVerified && (
+                <div className="text-emerald-400 text-xs font-bold flex items-center gap-1 mt-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Spot on! Compliance question verified.</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -316,7 +409,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
             className="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-slate-800 text-xs font-medium flex items-center gap-1 transition-colors"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>52 Script Sections / Help</span>
+            <span>Objections &amp; Q&amp;A</span>
           </button>
 
           {isFinalUnit ? (
@@ -324,7 +417,7 @@ export const ScriptRunner: React.FC<ScriptRunnerProps> = ({
               onClick={() => onEndCall("LEAD_COMPLETED")}
               className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs md:text-sm font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95"
             >
-              <span>Complete Lead &amp; Disposition</span>
+              <span>Introduce to Verification Officer</span>
               <Check className="w-4 h-4" />
             </button>
           ) : (

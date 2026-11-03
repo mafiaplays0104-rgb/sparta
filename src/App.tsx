@@ -33,13 +33,21 @@ export const App: React.FC = () => {
   // Live Customer Record
   const [customer, setCustomer] = useState<CustomerRecord>({
     title: "Mr",
-    firstName: "John",
-    lastName: "Smith",
-    doorNumber: "14",
-    street: "Highfield Road",
-    address: "14 Highfield Road",
-    postcode: "B33 8TH",
-    contactNumber: "0121 496 0123",
+    firstName: "",
+    lastName: "Campbell",
+    address: "_______",
+    contactNumber: "123455466",
+    selectedOpening: "OPENING_1",
+    dob: "__________",
+    isPrimaryAccountHolder: true,
+    handlesUtilityDecisions: true,
+    socialAlarmStatus: "NO",
+
+
+
+
+
+
     consumerId: "CIN-89371284",
     consumerIdStatus: "VERIFIED",
     isUsingAtHome: "YES",
@@ -51,7 +59,7 @@ export const App: React.FC = () => {
     selectedPlanName: "Sparta Line Only",
     selectedPlanBasePrice: 19.99,
     selectedPlanGrossPrice: 23.99,
-    dob: "14/05/1952",
+
     birthYear: 1952,
     calculatedAge: 74,
     isEligibleAge: true,

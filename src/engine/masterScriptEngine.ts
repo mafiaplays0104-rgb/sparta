@@ -55,7 +55,7 @@ export class MasterScriptEngine {
     if (customer.firstName) {
       return customer.firstName;
     }
-    return "Sir/Madam";
+    return "Mr. Customer";
   }
 
   /**
@@ -76,24 +76,16 @@ export class MasterScriptEngine {
   }
 
   /**
-   * Get the complete definition for any of the 9 Master Steps of the Sparta Telecom Script
+   * Get the complete definition for any of the 9 Master Steps of the Telecom Script
    */
   public static getStageDefinition(
     stage: MasterStage,
     customer: CustomerRecord,
     config: OfferConfig
   ): StageDefinition {
-    const advisorName = config.advisorName || "Alex";
-    const customerName = MasterScriptEngine.getCustomerDisplayName(customer);
-    const phoneNumber = customer.contactNumber || "0121 496 0123";
-    const fullAddress = customer.address || "14 Highfield Road";
-    const postcode = customer.postcode || "B33 8TH";
-    const dob = customer.dob || "14/05/1952";
-    const billStr = customer.monthlyBill ? `£${customer.monthlyBill.toFixed(2)}` : "your average bill";
-
     switch (stage) {
       // =============================================================
-      // STEP 1 — OPENING & TECHNICAL UPDATE PITCH
+      // STEP 1 — OPENING 1 & OPENING 2
       // =============================================================
       case "STEP_1_OPENING_TECHNICAL":
       case "PHASE_1_INTRODUCTION":
@@ -101,33 +93,44 @@ export class MasterScriptEngine {
         return {
           stage: "STEP_1_OPENING_TECHNICAL",
           stageNumber: 1,
-          stageName: "Step 1: Opening & Technical Update Pitch",
-          stepShortTitle: "Opening & Update",
-          objective: "Warm, polite opening introducing nationwide copper-to-fibre network upgrade. NEVER mention Sparta Telecom in this opening greeting.",
-          goldenRuleNote: "DELAYED BRAND DROP: Do NOT mention 'Sparta Telecom'. Focus on the technical exchange upgrade and zero disruption.",
-          complianceWarning: "STRICT RULE: Never mention 'Sparta Telecom' in opening. Technical network update first.",
-          getSayText: () =>
-            `“Hello... yeah hiii, am I speaking to ${customerName}?”\n\n(Customer: Yeah.)\n\n“Hello ${customerName}, a lovely afternoon to you, this side ${advisorName} calling regarding your landline that is currently active at your property.”\n\n(Customer: Okay.)\n\n“Well I have given you a call regarding a quick technical update that will be happening at your property as all across the UK now all the old copper network is gradually getting retired and replaced by new fibre line, and in your area and in your postcode as well, the exchange that your landline is connected with, it has also gotten upgraded. But as I was just checking your line, it is still connected with the old copper network, that's the reason I've called you to help you out upgrade your telephone line, so that in future you can continue using your home phone the same way you have been using till now without any disruption in your telephone line. Okay???”`,
-          pauseInstruction: "Customer replies 'Okay' or acknowledges the technical update. Listen patiently.",
+          stageName: "Step 1: Opening (Opening 1 / Opening 2)",
+          stepShortTitle: "Opening (1 or 2)",
+          objective: "Deliver Opening 1 (feedback / 30% reduction) or Opening 2 (digital conversion).",
+          goldenRuleNote: "Switch seamlessly between Opening 1 and Opening 2 based on time of day and campaign target.",
+          getSayText: (cust) => {
+            if (cust.selectedOpening === "OPENING_2") {
+              return `Hi, very good morning to you. Am I speaking with Mr. Customer?\nMy name is ______i m calling u in regards to your home phone no. I’m sure you are already aware that in the coming future everything is going to be digital because the normal copper line is converting into digital one. Hence there is an opportunity for bill reduction this year.`;
+            }
+            return `Me : Hello.... yeah hiii, Am i speaking to Mr xxxxxx, \nCx : yeah Me : Hello Mr Campbell, a lovely afternoon to you, this side _______ Calling regarding your landline that is currently active at your property.\nJust wanted to see your feedback on the services,if there is a scope for improvement?\nOr\nJust wanted to update, that your phone line is eligible for a reduction up to 30% this year.\nOk ? Take the response !!!`;
+          },
+          pauseInstruction: "Ok ? Take the response !!! Listen for customer reply.",
           quickResponses: [
             {
-              label: "Customer: “Okay” / “Yes”",
-              actionDescription: "Customer acknowledges update smoothly.",
+              label: "Opening 1: “Okay” / “Yes”",
+              actionDescription: "Customer confirms phone line and agrees to hear update.",
+              autoFill: { selectedOpening: "OPENING_1", personalDetailsConfirmed: true },
               nextStage: "STEP_2_PROBABILITY_DISCOVERY",
-              guidance: "Transition immediately into probability qualification questions.",
+              guidance: "Follow down the arrow (↓) to probability discovery.",
             },
             {
-              label: "“Who is calling please?”",
-              actionDescription: "Customer asks who is calling.",
-              guidance: `Say: “This side ${advisorName} calling regarding your landline active at your property and the technical network upgrade for your area.” (Do NOT drop brand name yet).`,
+              label: "Opening 2: “Yes, speaking”",
+              actionDescription: "Customer confirms Mr. Customer and listens to digital switchover.",
+              autoFill: { selectedOpening: "OPENING_2", personalDetailsConfirmed: true },
+              nextStage: "STEP_2_PROBABILITY_DISCOVERY",
+              guidance: "Follow down the arrow (↓) to probability discovery.",
             },
             {
-              label: "“Is there a problem with my telephone line?”",
-              actionDescription: "Customer is concerned about line interruption.",
-              guidance: "Say: “Not at all, your line is active. We are helping you transition to the upgraded digital exchange so you can continue using your home phone without any disruption.”",
+              label: "Switch to Opening 1 (Afternoon)",
+              actionDescription: "Use Opening 1 (Feedback or 30% reduction).",
+              autoFill: { selectedOpening: "OPENING_1" },
+            },
+            {
+              label: "Switch to Opening 2 (Morning)",
+              actionDescription: "Use Opening 2 (Digital conversion).",
+              autoFill: { selectedOpening: "OPENING_2" },
             },
           ],
-          why: "Delayed brand drop avoids immediate sales resistance and grounds the call in an urgent, genuine nationwide technical infrastructure upgrade.",
+          why: "Dual opening gives the agent flexibility to lead with service feedback / 30% reduction or nationwide copper-to-digital switchover.",
           nextStage: "STEP_2_PROBABILITY_DISCOVERY",
         };
 
@@ -142,45 +145,40 @@ export class MasterScriptEngine {
           stage: "STEP_2_PROBABILITY_DISCOVERY",
           stageNumber: 2,
           stageName: "Step 2: Probability Discovery & Qualification",
-          stepShortTitle: "Discovery & Qualification",
-          objective: "Qualify customer's usage: call volume (a lot vs hardly any), broadband presence, and current monthly bills for dynamic branch routing.",
-          goldenRuleNote: "Ask all 3 discovery questions: 1. Call volume, 2. Broadband presence, 3. Average current bill.",
+          stepShortTitle: "Probability Discovery",
+          objective: "Qualify call volume (quite a lot vs incoming calls), broadband presence, and current monthly phone bill.",
+          goldenRuleNote: "Ask all 3 discovery questions in order. If they are highly confused about what they pay or who their provider is, take note.",
           getSayText: () =>
-            `“So, in that regard, what would you say—do you make a lot of calls with this landline or do you hardly make any calls at all??”\n\n(Customer captures call volume)\n\n“And at your place, do you also use any Broadband?”\n\n(Customer captures broadband status)\n\n“And just so I can compare and see if any discount will be available for you on your new telephone package on the digital line, at the moment for your landline [and for your Broadband], on an average how much is it that you usually pay for your telephone bills??”`,
-          pauseInstruction: "Record customer's call volume, broadband type, and current monthly bill.",
+            `To make sure I look at the right options for you, May I know if  you are  using your home phone quite a lot for making calls, or is it mostly just there for incoming calls?"\n\n (Wait for customer response. Listen to see if they follow the question easily.)\n"And do you also have your internet or broadband running on this exact same line?"\n (Wait for customer response.)\nPerfect, thank you. To ensure our digital packages make sense for you financially, could you give me a rough idea of what you currently pay each month for your phone bill? Is it around £40 , £50 or over £60 a month , or perhaps a bit more or less than that?"\n\n (Wait for customer response. If they are highly confused about what they pay or who their provider is, take note.)`,
+          pauseInstruction: "Wait for customer response. Listen to see if they follow easily. If confused, take note.",
           quickResponses: [
             {
-              label: "Landline Only • Hardly any calls • Bill £40-£50",
-              actionDescription: "Route to Landline Only Branch (£19.99 + VAT).",
+              label: "Mostly incoming calls • No broadband • Around £40-£50",
+              actionDescription: "Landline Only branch.",
               autoFill: {
                 callVolume: "LOW_HARDLY_ANY",
                 broadbandStatus: "NO_BROADBAND",
                 monthlyBill: 48,
               },
               nextStage: "STEP_3_DYNAMIC_PACKAGE_PITCH",
-              guidance: "Pitch Sparta Line Only (£19.99 + VAT = £23.99/mo).",
+              guidance: "Proceed to transition pitch for Sparta digital service.",
             },
             {
-              label: "Normal Broadband • Average Calls • Bill £50-£65",
-              actionDescription: "Route to Normal Broadband Branch (£26.99 or £31.99 + VAT).",
+              label: "Using phone quite a lot • Broadband running on line • Around £50-£60+",
+              actionDescription: "Broadband bundle branch.",
               autoFill: {
-                callVolume: "AVERAGE",
+                callVolume: "HIGH_FREQUENT",
                 broadbandStatus: "NORMAL_BROADBAND",
                 monthlyBill: 58,
               },
               nextStage: "STEP_3_DYNAMIC_PACKAGE_PITCH",
-              guidance: "Pitch Line Only + Normal BB (£26.99+VAT) or Talk Unlimited + Normal BB (£31.99+VAT).",
+              guidance: "Proceed to transition pitch for Sparta digital service.",
             },
             {
-              label: "Fibre Broadband • Heavy Calls/Streaming • Bill £60+",
-              actionDescription: "Route to Fibre 40 / 80 Branch.",
-              autoFill: {
-                callVolume: "HIGH_FREQUENT",
-                broadbandStatus: "FIBRE_BROADBAND",
-                monthlyBill: 68,
-              },
-              nextStage: "STEP_3_DYNAMIC_PACKAGE_PITCH",
-              guidance: "Pitch Fibre 40 (£29.99-£39.99 + VAT) or Fibre 80 with free engineer visit.",
+              label: "⚠️ Customer confused about bill / provider",
+              actionDescription: "Note customer confusion for compliance and soft pacing.",
+              autoFill: { billOrProviderConfused: true },
+              guidance: "Take note and proceed patiently with approximate figures.",
             },
           ],
           why: "Probability discovery establishes customer needs and matches them to the exact Sparta Telecom tariff.",
@@ -189,7 +187,7 @@ export class MasterScriptEngine {
         };
 
       // =============================================================
-      // STEP 3 — DYNAMIC PACKAGE PITCH (BRANCHING BASED ON PROBABILITY)
+      // STEP 3 — DYNAMIC PACKAGE PITCH & SAVINGS
       // =============================================================
       case "STEP_3_DYNAMIC_PACKAGE_PITCH":
       case "PHASE_3_BUNDLE_PRICE_GUARANTEE":
@@ -197,244 +195,200 @@ export class MasterScriptEngine {
         return {
           stage: "STEP_3_DYNAMIC_PACKAGE_PITCH",
           stageNumber: 3,
-          stageName: "Step 3: Dynamic Package Pitch (Branching)",
-          stepShortTitle: "Dynamic Package Pitch",
-          objective: "Pitch the exact Sparta pricing branch based on qualified probability (Landline Only, Normal BB, or Fibre BB), quoting Base Price + 20% VAT and gross totals.",
-          goldenRuleNote: "Always state prices clearly as '[Base Price] + VAT' and provide the estimated gross monthly total.",
-          getSayText: (cust) => {
-            const branch = CalculatorTools.determineProbabilityBranch(cust);
-            if (branch === "LANDLINE_ONLY") {
-              return `“Got it, so after the upgrade now the prices of the telephone bills, they are also going to get revised, so what you will be paying after the upgrade as your telephone bills that is only £19.99 + VAT (Sparta Line Only, approx. £23.99/mo) or £26.99 + VAT (Enhanced Line Only with 500 landline and 200 mobile minutes, approx. £32.39/mo) each month. Okay???”`;
-            }
-            if (branch === "NORMAL_BROADBAND") {
-              return `“Got it, so after the upgrade now the prices of the telephone bills, they are also going to get revised, so what you will be paying after the upgrade as your telephone bills that is only £26.99 + VAT (Line Only + Normal BB with 500 mins, approx. £32.39/mo) or £31.99 + VAT (Sparta Talk Unlimited + Normal BB with 1000 LL + 500 mobile mins, approx. £38.39/mo) each month. Okay???”`;
-            }
-            // FIBRE_BROADBAND
-            return `“Got it, so after the upgrade now the prices of the telephone bills, they are also going to get revised, so what you will be paying after the upgrade as your telephone bills that is ranging from £29.99 + VAT up to £39.99 + VAT depending on your selected Fibre 40 or Fibre 80 speed and minute bundles (such as Fibre 40 with 500 mins at £31.99+VAT approx. £38.39/mo, or Sparta Unlimited + F40 at £34.99+VAT approx. £41.99/mo). Okay???”`;
-          },
-          pauseInstruction: "Present pricing transparently. Listen for customer agreement ('Okay' / 'That sounds good').",
+          stageName: "Step 3: Dynamic Package Pitch & Savings",
+          stepShortTitle: "Transition & Savings",
+          objective: "Transition customer to digital service with Sparta Telecom, keeping same line & number unchanged, quoting monthly and 24-month savings.",
+          goldenRuleNote: "State monthly savings and total 2-year savings back in their pocket over effective 24 months.",
+          getSayText: () =>
+            `Based on what you've told me, we can transition you over to a digital service with Sparta Telecom. This will keep your exact same phone number and line completely unchanged, but it will bring your bill down to just £[Insert monthly price].\nThis means you will save £[Insert monthly savings] every single month. Over the course of the 24-month agreement, that adds up to a total saving of £[Insert total 2-year savings] back in your pocket.\nHope it sounds good to you?\n(Wait for customer response.\n All of these savings are coming to you on the same line on your same number without changing anything from  Sparta telecom for an effective 24 months, that means you will be saving every month £___   if i talk about in 2 years you will be saving £_____.`,
+          pauseInstruction: "Hope it sounds good to you? (Wait for customer response.)",
           quickResponses: [
             {
-              label: "Customer Agrees / Accepts Tariff",
-              actionDescription: "Customer confirms new revised tariff.",
+              label: "Customer: “Sounds good” / “Okay”",
+              actionDescription: "Customer confirms savings and accepts digital transition.",
+              autoFill: { termsUnderstood: true, pricePromiseAcknowledged: true },
               nextStage: "STEP_4_SPARTA_BRAND_DROP",
-              guidance: "Proceed smoothly to Step 4 for the Sparta Telecom brand introduction.",
+              guidance: "Proceed to details verification and primary account holder check.",
             },
             {
-              label: "“Does that include VAT?”",
-              actionDescription: "Customer asks about VAT inclusive price.",
-              guidance: "State: “Yes, £19.99 plus 20% VAT is approx. £23.99 per month total (or £26.99 + VAT is £32.39/mo), with no hidden costs.”",
-            },
-            {
-              label: "“Can I get calls included?”",
-              actionDescription: "Customer wants minutes bundle.",
-              guidance: "Offer the £26.99 + VAT plan with 500 landline + 200 mobile minutes (approx. £32.39/mo total).",
+              label: "“How much will I save?”",
+              actionDescription: "Quote calculated monthly and 2-year savings.",
+              guidance: "Quote £[Insert monthly savings] per month and £[Insert total 2-year savings] over the 24-month agreement.",
             },
           ],
-          why: "Clear VAT transparency builds immediate trust and avoids billing surprises.",
+          why: "Clear statement of 24-month agreement savings reinforces value on unchanged line and number.",
           nextStage: "STEP_4_SPARTA_BRAND_DROP",
           prevStage: "STEP_2_PROBABILITY_DISCOVERY",
         };
 
       // =============================================================
-      // STEP 4 — SPARTA TELECOM BRAND DROP & NETWORK EXPLANATION
+      // STEP 4 — DETAILS & PRIMARY DECISION MAKER VERIFICATION
       // =============================================================
       case "STEP_4_SPARTA_BRAND_DROP":
         return {
           stage: "STEP_4_SPARTA_BRAND_DROP",
           stageNumber: 4,
-          stageName: "Step 4: Sparta Telecom Brand Drop & Openreach",
-          stepShortTitle: "Sparta Brand Drop",
-          objective: "Introduce Sparta Telecom, explain shared Openreach network, clarify separate independent provider status, billing name switch, and 24-month price promise guarantee.",
-          goldenRuleNote: "BRAND DROP HERE: Explain Sparta runs on Openreach just like BT/TalkTalk. Zero physical changes. 24-month price promise guarantee.",
+          stageName: "Step 4: Details & Primary Decision Maker Verification",
+          stepShortTitle: "Details Verification",
+          objective: "Verify phone number, customer name, address, DOB, and confirm primary account holder regulatory guideline.",
+          goldenRuleNote: "Must confirm customer is primary account holder and handles utility decisions for this household.",
           getSayText: () =>
-            `“And this upgrade and this new telephone package, it is coming to you from Sparta Telecom. And Sparta Telecom, BT, TalkTalk, we all work on the same network that's Openreach. I'm sure you might have come across Openreach before?”\n\n(Customer: Yeah I have.)\n\n“So basically this upgrade is done by Sparta telecom and sparta telecom is a totally separate and independent company from your current service provider and like all UK providers since sparta also runs and operates on the same network openreach, so by grace of that nothing will be changing physically at your property and just so you know, you'll use the same landline and the same number, only now the billing name will change from your current provider to sparta telecom, so that your landline [and BB] both can successfully get upgrade from normal to digital and also your telephone bills could be a little cheaper with sparta telecom. Okay??”\n\n(Customer: Alright.)\n\n“And one more benefit that you'll be getting with sparta telecom is 24 months price promise guarantee, that means you will be under the privilege as well as security that for the upcoming two years your bills won't be increasing under any circumstances. Okay???”`,
-          pauseInstruction: "Customer replies 'Okay'. Confirm understanding of Sparta Telecom as independent company on Openreach.",
+            `So in order to provide you to these savings and digital services i have your number with me 123455466 Your name with me Mr /Mrs/Miss/Ms_____\n Your address _______\nYour dob__________\nThank you. And just to confirm our regulatory guidelines, are you the primary account holder and the person who handles the utility decisions for this household?"\n \n (Wait for customer response.)`,
+          pauseInstruction: "Wait for customer response. Confirm primary account holder and utility decisions.",
           quickResponses: [
             {
-              label: "Customer: “Okay” / Understands",
-              actionDescription: "Customer accepts Sparta Telecom & 24-month price promise.",
-              autoFill: { brandDropAcknowledged: true, pricePromiseAcknowledged: true },
+              label: "✓ Yes, Primary Account Holder & Decision Maker",
+              actionDescription: "Customer confirms they handle household utility decisions.",
+              autoFill: {
+                isPrimaryAccountHolder: true,
+                handlesUtilityDecisions: true,
+                personalDetailsConfirmed: true,
+              },
               nextStage: "STEP_5_VERIFICATION_AGE_RAPPORT",
-              guidance: "Proceed to Step 5 details verification and pensioner rapport.",
+              guidance: "Proceed to Direct Debit and social alarm safety check.",
             },
             {
-              label: "“Are you BT?”",
-              actionDescription: "Customer asks if you are BT.",
-              guidance: "Clarify: “No, Sparta Telecom is a separate and independent company, but we operate on the exact same Openreach network as BT, so your line and number remain identical.”",
-            },
-            {
-              label: "“Will I lose my phone number?”",
-              actionDescription: "Customer worries about phone number change.",
-              guidance: "Reassure: “Not at all! You keep your exact same phone number and landline, only the billing name changes to Sparta Telecom.”",
+              label: "❌ Not Primary Decision Maker",
+              actionDescription: "Customer does not handle utility decisions.",
+              autoFill: { isPrimaryAccountHolder: false, handlesUtilityDecisions: false },
+              guidance: "Ask when the primary account holder is available to speak.",
             },
           ],
-          why: "Transparently establishing Sparta Telecom's relationship to Openreach satisfies regulatory compliance while reassuring the customer of seamless continuity.",
+          why: "Regulatory compliance mandates that contract agreements are made with the authorized household utility decision maker.",
           nextStage: "STEP_5_VERIFICATION_AGE_RAPPORT",
           prevStage: "STEP_3_DYNAMIC_PACKAGE_PITCH",
         };
 
       // =============================================================
-      // STEP 5 — VERIFICATION, AGE & RAPPORT BUILDING
+      // STEP 5 — DIRECT DEBIT MODE & SOCIAL ALARM CHECK
       // =============================================================
       case "STEP_5_VERIFICATION_AGE_RAPPORT":
       case "STAGE_2_VERIFICATION_ID":
         return {
           stage: "STEP_5_VERIFICATION_AGE_RAPPORT",
           stageNumber: 5,
-          stageName: "Step 5: Verification, Age & Rapport Building",
-          stepShortTitle: "Verification & Rapport",
-          objective: "Verify phone number, check medical alarm (Lifeline/Careline), confirm full name, middle initial, address, and validate DOB with warm pensioner rapport.",
-          goldenRuleNote: "PENSIONER RAPPORT: When customer gives DOB, respond warmly: '[DOB]? My goodness, you must have seen a lots of changes in this country by now... HAHAHA'",
+          stageName: "Step 5: Direct Debit Mode & Social Alarm / Pendant Check",
+          stepShortTitle: "Direct Debit & Alarm",
+          objective: "Confirm payment remains Direct Debit and conduct critical social alarm / pendant safety check.",
+          goldenRuleNote: "If alarm is digital, must verify if it plugs into internet router or standard electrical wall socket.",
           getSayText: () =>
-            `“So now in order for us to provide you with this upgrade I'll quickly be verifying the details, i've got your telephone number here with me, correct me if i'm wrong that's ${phoneNumber}, right??”\n\n(Customer: That's correct.)\n\n“And by any chance do you also use any medical alarm system like lifeline or careline anything like that??”\n\n(Customer: No.)\n\n“That's a good thing that you're still doing independent. And i've got your full name here with me that's ${customerName}, right??”\n\n(Customer: Yes.)\n\n“And do you also use any middle initial or any middle name that you like??”\n\n(Customer captures middle initial / No)\n\n“And i've got your mailing address here with me that's ${fullAddress}, with the postcode ${postcode}”\n\n(Customer: That's right.)\n\n“And now just for the age validation, just to make sure that yes you're elligible for this upgrade, could you please help me out with your DOB??”\n\n(Customer: It's ${dob})\n\n“${dob}? My goodness, you must have seen a lots of changes in this country by now... HAHAHA”`,
-          pauseInstruction: "Share a warm laugh with customer on their DOB and pensioner milestone.",
+            `As you pay your bills by direct debit at the moment so your mode of payment will remain the same as it is with Sparta telecom.\n"Perfect. Since you currently pay your bills via Direct Debit, that secure payment method will stay exactly the same with us at Sparta Telecom. There's nothing new you need to set up there.\nNow, your safety is very important to us, especially with the digital switchover. Do you currently use any type of social alarm, pendant, or personal safety button connected to your phone line?"\n[If NO]: "Excellent, we can move right along."\n[If YES & Line is Copper]: "Perfect, we can proceed. Just to let you know, our team will ensure this transitions smoothly."\n[If YES & Line is Digital]: "Ah, I see. Could you let me know if that alarm plugs directly into your internet router, or does it plug into a standard electrical wall socket?" (Must be electricity to`,
+          pauseInstruction: "Check alarm. If NO move along; if Copper transitions smoothly; if Digital verify electrical socket.",
           quickResponses: [
             {
-              label: "Verified Details & Customer Laughs ('Oh sure I have, HAHAHA')",
-              actionDescription: "Details verified and rapport built smoothly.",
-              autoFill: { addressConfirmed: true, personalDetailsConfirmed: true, medicalAlarm: false },
+              label: "[If NO]: Excellent, we can move right along",
+              actionDescription: "No social alarm or pendant in use.",
+              autoFill: { socialAlarmStatus: "NO", medicalAlarm: false },
               nextStage: "STEP_6_FREE_SERVICES_EXTENSIONS",
-              guidance: "Proceed to Step 6 for answering machine and extension phones check.",
+              guidance: "Move right along to calling features.",
             },
             {
-              label: "Customer HAS Lifeline / Medical Alarm ('Yes')",
-              actionDescription: "Customer uses Careline/Lifeline.",
-              autoFill: { medicalAlarm: true },
-              guidance: "Acknowledge: “No problem at all, our certified engineer will ensure the digital socket works seamlessly with your alarm unit.”",
+              label: "[If YES & Line is Copper]: Transitions smoothly",
+              actionDescription: "Alarm connected to copper line.",
+              autoFill: { socialAlarmStatus: "YES_COPPER", medicalAlarm: true },
+              nextStage: "STEP_6_FREE_SERVICES_EXTENSIONS",
+              guidance: "Team will ensure this transitions smoothly.",
             },
             {
-              label: "Customer asks: “Why do you need my DOB?”",
-              actionDescription: "Customer asks purpose of DOB.",
-              guidance: "Say: “Just for age validation to make sure you qualify as a privileged customer for the upgrade and discounted router.”",
+              label: "[If YES & Line is Digital]: Electrical wall socket",
+              actionDescription: "Digital alarm plugs into standard electrical wall socket.",
+              autoFill: { socialAlarmStatus: "YES_DIGITAL_SOCKET", medicalAlarm: true },
+              nextStage: "STEP_6_FREE_SERVICES_EXTENSIONS",
+              guidance: "Proceed with electrical wall socket confirmation.",
             },
           ],
-          why: "Warm human laughter and rapport around age breaks institutional barriers and reassures elderly landline holders.",
+          why: "Customer safety during digital conversion is paramount; alarm compatibility must be verified.",
           nextStage: "STEP_6_FREE_SERVICES_EXTENSIONS",
           prevStage: "STEP_4_SPARTA_BRAND_DROP",
         };
 
       // =============================================================
-      // STEP 6 — FREE SERVICES & EXTENSION CHECK
+      // STEP 6 — FREE CALLING FEATURES & PAPER ITEMIZED BILL
       // =============================================================
       case "STEP_6_FREE_SERVICES_EXTENSIONS":
         return {
           stage: "STEP_6_FREE_SERVICES_EXTENSIONS",
           stageNumber: 6,
-          stageName: "Step 6: Free Services & Extension Check",
-          stepShortTitle: "Free Services & Extensions",
-          objective: "Confirm free 1571/1471 answering machine, paper bill (2 months free, then £1), and check extension phone compatibility (cordless/corded).",
-          goldenRuleNote: "Confirm 1571/1471 is free. Check if extension phones are cordless/corded and reassure no new phones needed.",
+          stageName: "Step 6: Free Calling Features & Paper Itemized Bill",
+          stepShortTitle: "Features & Paper Bill",
+          objective: "Confirm free 1471/1571 voicemail and paper itemized bill (2 months free, then £1, deactivate anytime).",
+          goldenRuleNote: "1571 voicemail is free. Paper bill free for 2 months, then £1, can deactivate anytime.",
           getSayText: () =>
-            `“And with this services the 1571 / 1471 that's the answering machine for your landline, now that is also going to be an absolutely free service for you and you'll also receive paper bill each and every month which will show you how many calls you've made, how you're getting charged and for the first 2 months even the paper bill is absolutely free for you and thereafter it will only cost you £1 extra on top of your package price.”\n\n(Customer: Okay.)\n\n“And apart from this main phone have you got any extension aswell connected on the same telephone line??”\n\n(Customer captures extension details)\n\n“Oh and are both of them cordless or corded, i mean can you walk and talk with both of them?”\n\n(Customer: Yes.)\n\n“Then both of the phones will be working absolutely fine with the services, you don't need to purchase any new phone.”`,
-          pauseInstruction: "Customer confirms phone setup. Reassure they don't need new handsets.",
+            `You use any calling features like 1471/1571 1571 voice mail calling feature is free for you .\nWe will send u a paper itemized bill which is free for u for the first 2 months afterwards if u wish to continue it will only cost 1 pound on top of your package and you can deactivate the paper bill any time you want.`,
+          pauseInstruction: "Customer confirms calling features and paper bill terms.",
           quickResponses: [
             {
-              label: "Customer: “Okay” / Both phones cordless",
-              actionDescription: "Extension confirmed cordless and fully compatible.",
-              autoFill: { hasExtensionPhones: true, extensionType: "CORDLESS" },
+              label: "Customer: “Okay” / Agrees",
+              actionDescription: "Customer confirms calling features and paper bill terms.",
+              autoFill: { callingFeaturesConfirmed: true, paperBillConfirmed: true },
               nextStage: "STEP_7_ENGINEER_ROUTER_COST",
-              guidance: "Proceed to Step 7 engineer appointment and router details.",
-            },
-            {
-              label: "Customer has only 1 main telephone (No extensions)",
-              actionDescription: "Single phone at property.",
-              autoFill: { hasExtensionPhones: false, extensionType: "NONE" },
-              nextStage: "STEP_7_ENGINEER_ROUTER_COST",
-              guidance: "Proceed directly to Step 7.",
-            },
-            {
-              label: "Customer has corded extension in bedroom/hallway",
-              actionDescription: "Corded extension present.",
-              autoFill: { hasExtensionPhones: true, extensionType: "CORDED" },
-              guidance: "Reassure: “Our engineer will check the extension socket so your existing corded phone keeps working perfectly.”",
+              guidance: "Proceed to Sparta platform and independent company explanation.",
             },
           ],
-          why: "Elderly customers frequently worry about whether their existing extension handsets and answering machines will stop working on digital lines.",
+          why: "Provides transparent reassurance on free voicemail features and optional £1 paper bill.",
           nextStage: "STEP_7_ENGINEER_ROUTER_COST",
           prevStage: "STEP_5_VERIFICATION_AGE_RAPPORT",
         };
 
       // =============================================================
-      // STEP 7 — ENGINEER PROCESS, ROUTER & COST BREAKDOWN
+      // STEP 7 — SPARTA PLATFORM & INDEPENDENT COMPANY
       // =============================================================
       case "STEP_7_ENGINEER_ROUTER_COST":
       case "PHASE_4_HARDWARE_INSTALLATION":
         return {
           stage: "STEP_7_ENGINEER_ROUTER_COST",
           stageNumber: 7,
-          stageName: "Step 7: Engineer Process, Router & Cost Breakdown",
-          stepShortTitle: "Engineer & Router (£30)",
-          objective: "Explain Openreach certified engineer visit in 14-15 business days, prior router postal delivery, free engineer visit, and pensioner £30 one-time router fee adjusted on future bill with zero upfront fee.",
-          goldenRuleNote: "ZERO UPFRONT: Free certified engineer visit. Router is £30 one-time (vs £100-£110 market) adjusted on future bill, not in advance.",
+          stageName: "Step 7: Sparta Telecom BT Platform & Independent Company",
+          stepShortTitle: "Sparta Platform",
+          objective: "Confirm working on same platform as BT works, while clarifying separate and independent company status.",
+          goldenRuleNote: "Clarify Sparta works on same platform as BT, but is totally separate and independent from BT, Talk Talk, Italk, EE, Plusnet.",
           getSayText: () =>
-            `“And now i'll tell you how this upgrade is actually going to happen, so for the upgrade we will be fixing an appointment with the openreach engineers and in the upcoming 2 weeks time, about 14 to 15 business days from now, the certified engineers are going to visit your house physically to install the digital line, and since it going to be background update so there will be no physical changes required at your property and prior to the engineers visit you'll be receiving a new fibre optic router as well, and after receiving the router, your job is going to be very simple, you just have to hand over the router to those openreach engineers and rest they'll be doing every needful things to upgrade your telephone line. Okay??”\n\n(Customer: Okay.)\n\n“And the best part about sparta telecom is that, with us you would not need to pay anything neither for the installation and nor for the engineer's visit as everything will be taken care of by us, however if you'll go down to the market to find these kind of digital router, it might cost you nearly about 100 or 110 pounds but now that as you're retired and a pentioner and as you're going to be our priviledged customer with sparta telecom, this router is only going to cost you one time charge of 30 pounds and that too not in advance, once the upgrade will have happened then it will be adjusted in your future telephone bills, so basically you do not need to pay anything upfront for this upgrade to take place okay??”\n\n(Customer: Very good.)\n\n“So now i believe you're happy and satisfied to go ahead with sparta telecom for the digital services and we're a separate and indipendent company from your current provider. i believe you do understand that now??”`,
-          pauseInstruction: "Customer replies 'Yes' or 'Very good'. Confirm satisfaction and understanding.",
+            `So all these savings and digital services are coming to you with the help of Sparta Telecom and we are working on the same platform as BT works. However we are a totally separate and independent company from BT, Talk Talk, Italk ,EE , Plusnet.\nWait For cx response!`,
+          pauseInstruction: "Wait For cx response! Confirm customer understands independent provider status.",
           quickResponses: [
             {
-              label: "Customer: “Very good” / Satisfied to proceed",
-              actionDescription: "Customer understands engineer visit and £30 adjusted charge.",
-              autoFill: { routerFeeAdjustedAcknowledged: true, termsUnderstood: true },
+              label: "Customer: “Understood” / Acknowledges",
+              actionDescription: "Customer acknowledges Sparta is independent on BT platform.",
+              autoFill: { spartaBtPlatformAcknowledged: true, brandDropAcknowledged: true },
               nextStage: "STEP_8_DIRECT_DEBIT_DPA1998",
-              guidance: "Move to Step 8 Direct Debit and DPA 1998 mandate explanation.",
-            },
-            {
-              label: "“Do I have to pay anything today?”",
-              actionDescription: "Customer asks about immediate payment.",
-              guidance: "Emphasize: “No, you do not pay anything upfront today. The £30 is adjusted in your future telephone bill only after the upgrade takes place.”",
-            },
-            {
-              label: "“Do I have to plug in the router myself?”",
-              actionDescription: "Customer worried about technical installation.",
-              guidance: "Reassure: “Not at all! You simply hand the package to the Openreach engineer when they visit, and they do everything for you.”",
+              guidance: "Proceed to compliance verification day question.",
             },
           ],
-          why: "Removes technical fear by providing a free engineer visit and confirms zero upfront payment for pensioner peace of mind.",
+          why: "Clear platform disclosure satisfies regulatory transparency and avoids brand confusion.",
           nextStage: "STEP_8_DIRECT_DEBIT_DPA1998",
           prevStage: "STEP_6_FREE_SERVICES_EXTENSIONS",
         };
 
       // =============================================================
-      // STEP 8 — DIRECT DEBIT & DPA 1998 MANDATE
+      // STEP 8 — COMPLIANCE COGNITIVE / DAY VERIFICATION
       // =============================================================
       case "STEP_8_DIRECT_DEBIT_DPA1998":
         return {
           stage: "STEP_8_DIRECT_DEBIT_DPA1998",
           stageNumber: 8,
-          stageName: "Step 8: Direct Debit & DPA 1998 Mandate",
-          stepShortTitle: "Direct Debit & DPA 1998",
-          objective: "Confirm payment method, explain final bill & refund from current provider, and emphasize DPA 1998 compliance (NO bank details taken on phone; bank-specific mandate form sent in post).",
-          goldenRuleNote: "DPA 1998 COMPLIANCE: Do NOT take sort code or account number over phone. Send the official paper mandate form of their bank.",
-          complianceWarning: "STRICT COMPLIANCE: Never ask for confidential bank details over the phone under DPA 1998. Only ask for the Bank Name to post the correct mandate form.",
+          stageName: "Step 8: Compliance Cognitive / Day Verification",
+          stepShortTitle: "Compliance Day Check",
+          objective: "Ask compliance day verification question: Sunday, Monday, or Tuesday.",
+          goldenRuleNote: "Ask what day of the week it is today: Sunday, Monday, or Tuesday. Ensures customer comfort and comprehension.",
           getSayText: () =>
-            `“Perfect, and at the moment you're paying your bills is it by cash, cheque or Direct Debit?”\n\n(Customer: Direct Debit.)\n\n“Oh Direct Debit, so the best part is that even the mode of the payment is going to remain exactly the same as it is and let me tell you how it is going to work, once you come to sparta telecom for the digital services, before that your current provider is just going to charge you one final bill and if they have charged you any money in advance then they are also going to refund you with that money, and then the direct debit that you've setup with them, it is automatically going to get cancelled, and later on a new Direct Debit will be setup with sparta telecom for your future billing purposes. Okay?”\n\n(Customer: Okay.)\n\n“But the good part is that as we're working here under DPA 1998, so we will not be requiring any of your confidential details or banking details over the phone, what we will do is that we will send you the direct debit mandate form of your bank which you can fill it up yourself and send it back to us. Okay?”\n\n(Customer: Okay.)\n\n“And just to send you the correct direct debit mandate form, which bank you generally deal with?”`,
-          pauseInstruction: "Customer provides Bank Name (e.g. Barclays, Lloyds, NatWest). Select/record their bank.",
+            `"Wonderful. To wrap things up, our compliance team requires me to ask a quick verification question to ensure you feel completely comfortable with everything we've discussed. Just for the record, could you confirm for me what day of the week it is today? Is it Sunday, Monday, or Tuesday?"\n Wait For cx response!`,
+          pauseInstruction: "Wait For cx response! Listen for customer's response to day of the week.",
           quickResponses: [
             {
-              label: "Bank Provided (e.g. Barclays / Lloyds / NatWest)",
-              actionDescription: "Customer specifies their banking provider.",
-              autoFill: { dpaMandateFormRequested: true },
+              label: "Customer Answers Day Correctly",
+              actionDescription: "Customer confirms day of the week.",
+              autoFill: { isDayVerified: true },
               nextStage: "STEP_9_VERIFICATION_HANDOFF",
-              guidance: "Acknowledge bank and transition to colleague verbal confirmation handoff.",
-            },
-            {
-              label: "Customer: “Why do you need to know my bank?”",
-              actionDescription: "Customer asks why bank name is required.",
-              guidance: "Reassure: “Each bank has its own specific Direct Debit mandate form with their logo and address, so we just make sure we post you the exact form for your bank.”",
-            },
-            {
-              label: "Customer pays by Cash / Cheque",
-              actionDescription: "Customer does not currently use Direct Debit.",
-              guidance: "Explain: “Direct Debit with Sparta ensures your 24-month price guarantee and automatic discounts, and we will send you the mandate form to review comfortably in the post.”",
+              guidance: "Proceed with 'Spot on!' and handoff to verification officer.",
             },
           ],
-          why: "Explicitly stating DPA 1998 compliance and refusing to take sensitive bank numbers over the phone eliminates scam fear and builds massive credibility.",
+          why: "Cognitive comfort question guarantees customer is lucid, comfortable, and fully following the agreement.",
           nextStage: "STEP_9_VERIFICATION_HANDOFF",
           prevStage: "STEP_7_ENGINEER_ROUTER_COST",
         };
 
       // =============================================================
-      // STEP 9 — VERIFICATION HANDOFF
+      // STEP 9 — VERIFICATION OFFICER HANDOFF
       // =============================================================
       case "STEP_9_VERIFICATION_HANDOFF":
       case "PHASE_5_VERIFICATION_CLOSING":
@@ -445,27 +399,26 @@ export class MasterScriptEngine {
         return {
           stage: "STEP_9_VERIFICATION_HANDOFF",
           stageNumber: 9,
-          stageName: "Step 9: Verification Handoff",
+          stageName: "Step 9: Verification Officer Handoff",
           stepShortTitle: "Verification Handoff",
-          objective: "Warm, professional handoff to colleague for verbal confirmation that customer understood switchover before processing arrangements.",
-          goldenRuleNote: "Hand over with warmth. Colleague takes verbal confirmation of understanding.",
+          objective: "Confirm pleasant experience ('Spot on!') and introduce customer to verification officer for 2-minute discount confirmation.",
+          goldenRuleNote: "Thank customer by name (Mrs. Smith) and hold line for verification officer.",
           getSayText: () =>
-            `“Perfectly fine, now everything is done from my side and in a minute one of my colleagues will just be taking a verbal confirmation from you that you've understood about this switchover, so you just have to give an affirmative response so that we can move further smoothly to do the arrangements, okay?”\n\n(Customer: Okay.)\n\n“Here's my colleague just have a word with him...”`,
-          pauseInstruction: "Customer confirms 'Okay'. Hand over line to colleague for verbal switchover confirmation.",
+            `"Spot on! The reason I ask is just to ensure we've taken our time today, had a clear conversation, and that you are happy with how everything was explained.\nI’m now going to introduce you to my verification officer. They will spend just two minutes re-verifying these details to ensure everything is perfectly accurate and that you've received the exact discount promised. Thank you so much for your time, Mrs. Smith, holding the line for just a moment!"`,
+          pauseInstruction: "Hold line and hand over to verification officer.",
           quickResponses: [
             {
-              label: "Customer: “Okay” (Handoff Accepted)",
-              actionDescription: "Customer gives affirmative response and accepts verbal confirmation handoff.",
-              autoFill: { finalConfirmationGiven: true, customerDecision: "YES" },
-              guidance: "Lead successfully completed! Connect to verification colleague.",
-            },
-            {
-              label: "Customer asks: “What will they ask me?”",
-              actionDescription: "Customer asks what colleague will ask.",
-              guidance: "Say: “Just a quick 30-second verbal confirmation that you're happy with the switchover to digital and understand Sparta Telecom is looking after your line.”",
+              label: "✓ Handoff to Verification Officer",
+              actionDescription: "Customer agrees to 2-minute reverification. Lead successfully completed!",
+              autoFill: {
+                finalConfirmationGiven: true,
+                customerDecision: "YES",
+                verificationOfficerHandoff: true,
+              },
+              guidance: "Lead successfully completed! Connect call to verification officer.",
             },
           ],
-          why: "Two-party verbal confirmation ensures regulatory compliance, customer comprehension, and high lead quality.",
+          why: "Two-minute verification officer check guarantees audit-proof lead validity and customer satisfaction.",
           nextStage: "STEP_9_VERIFICATION_HANDOFF",
           prevStage: "STEP_8_DIRECT_DEBIT_DPA1998",
         };

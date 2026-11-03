@@ -55,6 +55,7 @@ export type HomeServiceStatus = "YES" | "NO" | "DONT_KNOW" | "UNCONFIRMED";
 export type CustomerIdStatus = "PENDING" | "VERIFIED" | "NOT_AVAILABLE" | "REFUSED" | "INVALID";
 export type LandlineUsage = "LOW" | "MODERATE" | "HIGH" | "INCOMING_ONLY" | "UNSURE";
 export type MobileType = "PAYG" | "CONTRACT" | "UNKNOWN";
+export type OpeningOption = "OPENING_1" | "OPENING_2";
 
 export interface CustomerRecord {
   // Identity & Contact
@@ -129,6 +130,21 @@ export interface CustomerRecord {
   routerFeeAdjustedAcknowledged?: boolean;
   dpaMandateFormRequested?: boolean;
   paymentMethod?: "DIRECT_DEBIT" | "CASH" | "CHEQUE";
+
+  // Telecom Script Exact Flow & Compliance Fields
+  selectedOpening?: OpeningOption;
+  isPrimaryAccountHolder?: boolean;
+  handlesUtilityDecisions?: boolean;
+  billOrProviderConfused?: boolean;
+  confusionNotes?: string;
+  socialAlarmStatus?: "NO" | "YES_COPPER" | "YES_DIGITAL_ROUTER" | "YES_DIGITAL_SOCKET";
+  socialAlarmType?: string;
+  callingFeaturesConfirmed?: boolean;
+  paperBillConfirmed?: boolean;
+  spartaBtPlatformAcknowledged?: boolean;
+  dayVerificationAnswer?: string;
+  isDayVerified?: boolean;
+  verificationOfficerHandoff?: boolean;
 }
 
 export interface OfferConfig {
