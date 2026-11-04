@@ -43,43 +43,36 @@ export const CustomerPanel: React.FC<CustomerPanelProps> = ({
   // Probability calculations matching the Telecom Script
   const probSavings = CalculatorTools.calculateScriptProbabilitySavings(customer);
 
-  // 9 Master Steps Checklist matching the exact Telecom Script
+  // 6-Section Checklist matching the official Sparta Telecom Script
   const checklist = [
     {
-      label: "1. Opening (Opening 1 or 2)",
-      checked: !!(customer.selectedOpening || customer.personalDetailsConfirmed),
+      label: "1. Opening Hook (Qualify Calls, BB, Bill)",
+      checked: !!(customer.callVolume || customer.broadbandStatus || customer.monthlyBill || customer.personalDetailsConfirmed),
     },
     {
-      label: "2. Probability Discovery (Calls, BB, Bill)",
-      checked: !!(customer.callVolume || customer.broadbandStatus || customer.monthlyBill),
+      label: "2. Probability & Plan Selection (A / B / C)",
+      checked: !!(customer.termsUnderstood || customer.pricePromiseAcknowledged || customer.probabilityBranch),
     },
     {
-      label: "3. Transition & 24-Mo Savings Pitch",
-      checked: !!(customer.termsUnderstood || customer.pricePromiseAcknowledged),
-    },
-    {
-      label: "4. Details & Primary Account Holder",
-      checked: customer.isPrimaryAccountHolder !== undefined || !!customer.addressConfirmed,
-    },
-    {
-      label: "5. Direct Debit & Social Alarm Check",
-      checked: !!(customer.socialAlarmStatus || customer.paymentMethod),
-    },
-    {
-      label: "6. Free 1571 Voicemail & Paper Bill",
-      checked: !!(customer.callingFeaturesConfirmed || customer.paperBillConfirmed),
-    },
-    {
-      label: "7. Sparta BT Platform & Independence",
+      label: "3. Sparta Brand & Openreach Network Pitch",
       checked: !!(customer.spartaBtPlatformAcknowledged || customer.brandDropAcknowledged),
     },
     {
-      label: "8. Compliance Day Verification",
-      checked: !!customer.isDayVerified,
+      label: "4. Safety, Account Holder & Free Features",
+      checked: !!(
+        customer.isPrimaryAccountHolder !== undefined ||
+        customer.socialAlarmStatus ||
+        customer.callingFeaturesConfirmed
+      ),
     },
     {
-      label: "9. Verification Officer Handoff",
+      label: "5. Data Protection (UK GDPR) & Direct Debit",
+      checked: !!(customer.bankName || customer.dpaMandateFormRequested || customer.paymentMethod),
+    },
+    {
+      label: "6. Compliance Day Check & Verification Handoff",
       checked: !!(
+        customer.isDayVerified ||
         customer.verificationOfficerHandoff ||
         customer.finalConfirmationGiven ||
         customer.customerDecision === "YES"

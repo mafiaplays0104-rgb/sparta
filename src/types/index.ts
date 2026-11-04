@@ -1,5 +1,12 @@
 export type MasterStage =
-  // Sparta Master 9-Step Conversation Flow
+  // 6 Primary Master Sections (matching the Telecom Script)
+  | "SECTION_1_OPENING_HOOK"
+  | "SECTION_2_PROBABILITY_PLANS"
+  | "SECTION_3_SPARTA_BRAND_NETWORK"
+  | "SECTION_4_SAFETY_ACCOUNT_CHECKS"
+  | "SECTION_5_DATA_PROTECTION_DIRECT_DEBIT"
+  | "SECTION_6_COMPLIANCE_HANDOFF"
+  // Legacy step aliases for backward compatibility
   | "STEP_1_OPENING_TECHNICAL"
   | "STEP_2_PROBABILITY_DISCOVERY"
   | "STEP_3_DYNAMIC_PACKAGE_PITCH"
@@ -113,6 +120,11 @@ export interface CustomerRecord {
   accountNumber?: string;
   bankName?: string;
   iban?: string;
+
+  // Agent & Personalization Fields
+  agentName?: string;
+  customerLastName?: string;
+  probabilityBranch?: "A" | "B" | "C";
 
   // Sparta Specific Fields
   callVolume?: "LOW_HARDLY_ANY" | "HIGH_FREQUENT" | "AVERAGE" | "UNSPECIFIED";

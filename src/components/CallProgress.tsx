@@ -21,10 +21,10 @@ export const CallProgress: React.FC<CallProgressProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          9 Master Steps
+          6 Script Sections
         </span>
         <span className="text-[10px] font-mono text-sparta-400 font-bold">
-          Step {currentIndex >= 0 ? currentIndex + 1 : STAGES_LIST.length} / {STAGES_LIST.length}
+          Section {currentIndex >= 0 ? currentIndex + 1 : STAGES_LIST.length} / {STAGES_LIST.length}
         </span>
       </div>
 
